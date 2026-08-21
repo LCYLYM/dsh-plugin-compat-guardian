@@ -20,6 +20,7 @@ Project stage: technical
 - 已确认 M0 分两步：先在没有模型 key 的情况下证明监控、真实兼容测试、报告和去重；再在隔离测试分支恢复历史 `httpServer` 旧错误，验证模型维修和 PR。两个阶段都不开 auto-merge/direct-push。
 - 已确认 repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，包括源码、manifest、安装脚本、仓库测试和文档；不维护逐仓库长 allowlist。短禁止清单保护 workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径，最终 PASS 由这些不可修改的验收面决定。
 - 已确认仓库测试可以随维修一起修改，但凡 diff 新增或修改测试文件、测试配置或测试命令，本次交付都强制降级为普通 PR；即使仓库开启 auto-merge/direct-push，也要人工审核该测试面变化。没有改测试面的维修仍遵循仓库所选交付模式。
+- 已确认依赖只做与当前 DSH 故障直接相关的最小调整：允许修改已有 DSH 相关版本范围并同步 lockfile；禁止全量/无关升级和切换包管理器；新增/删除依赖、跨 major 升级或修改安装生命周期脚本时强制人工 PR，其余通过完整复验后可遵循所选交付模式。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

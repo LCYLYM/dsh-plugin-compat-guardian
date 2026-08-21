@@ -20,6 +20,7 @@
 - R18 [open] M0 分两阶段验收：第一阶段不配置模型 key，只证明监控、真实兼容测试、报告、lock 和去重；第二阶段才在隔离测试分支恢复历史 `httpServer` 旧接口错误，启用 repair model，要求机器人产出通过原始 verifier 的修复 PR。两阶段均关闭 auto-merge/direct-push；surface: public fixture branch/Actions/PR；evidence: 无模型运行记录、受控失败复现、修复 diff 和可合并但未自动合并的 PR。
 - R19 [open] repair DSH 默认可修改仓库内所有已跟踪的插件文件，不要求仓库配置长 allowlist；必须机械拒绝对 `.github/workflows/**`、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外解析路径的修改；surface: repair worktree/diff publisher；evidence: 允许源码、manifest、脚本、测试和文档修改的正例，以及每类禁止路径被拒绝的负例。
 - R20 [open] repair diff 只要新增或修改测试文件、测试配置或 manifest 中的测试命令，本次交付必须忽略已开启的 auto-merge/direct-push，降级为需要人工审核的普通 PR，并在报告中说明触发文件；surface: diff classifier/publisher/PR；evidence: 三类测试面变更均被降级、普通源码变更仍遵循所选交付模式的端到端测试。
+- R21 [open] 依赖修改只允许与当前 candidate DSH 故障有证据关联的最小变化；全量/无关升级和包管理器切换必须被拒绝，新增/删除依赖、跨 major 升级或安装生命周期脚本变化必须强制人工 PR，普通 DSH 相关版本范围和配套 lockfile 变化可在完整复验后遵循所选交付模式；surface: manifest/lockfile diff classifier/publisher；evidence: 允许、拒绝和强制降级三组端到端样例。
 
 Current slice: R0 需求与架构设计
 

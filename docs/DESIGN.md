@@ -62,6 +62,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D20 | 当前处于 grilling 阶段；用户明确宣布 grilling 结束并要求开工前，只允许调研和文档，不实施 workflow、故障场景、secrets 或模型调用。 |
 | D21 | repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret 和仓库外路径进入短禁止清单。 |
 | D22 | repair DSH 可以提案修改仓库测试，但只要 diff 触及测试文件、测试配置或测试命令，本次交付就强制为普通 PR；即使仓库开启 auto-merge/direct-push，也必须人工审核后才能落库。 |
+| D23 | 依赖改动必须与当前 DSH 兼容故障直接相关且保持最小；禁止全量升级、无关升级和更换包管理器。新增/删除依赖、跨 major 升级或改安装生命周期脚本时强制人工 PR；普通 DSH 相关版本范围与 lockfile 调整可在完整复验后使用所选交付模式。 |
 
 ## 4. 最小架构
 
@@ -268,6 +269,8 @@ model:      deepseek-v4-flash-vision-exp
 
 仓库自己的测试允许随兼容修复一起提案修改，但不能让机器人同时修改测试又自动把结果落进默认分支。publisher 在 diff 中发现测试文件、测试配置，或 `package.json` 等 manifest 里的测试命令发生变化时，必须把本次交付强制降级为普通 PR，并在报告里列出触发路径；仓库配置的 `auto-merge`/`direct-push` 只对没有改动测试面的维修生效。新增测试也按测试改动处理。
 
+依赖变更采用最小因果规则：失败证据必须能说明该改动是适配当前 candidate DSH 所需，允许调整已有 DSH 相关依赖的版本/范围并同步当前包管理器的 lockfile。publisher 机械拒绝全量升级、无关依赖升级和包管理器切换；发现新增或删除依赖、跨 major 升级，或 `preinstall`/`install`/`postinstall` 等安装生命周期脚本变化时，本次交付强制为普通 PR。普通 DSH 相关版本范围及其 lockfile 变化在完整 verifier 通过后仍可使用仓库所选交付模式。
+
 默认最多两轮。每轮结束后 agent 只能交付 diff；独立 verifier 从干净副本应用 diff 并重新执行原始合同。
 
 ## 12. Campaign 预算
@@ -428,4 +431,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定依赖改动的允许范围，以及哪些依赖变更必须强制人工 PR。生成文件策略随后再定。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定源码与 `lib/dist` 等生成文件的权威关系，以及 verifier 应如何处理构建产物。其余已经确认的决定不因后续讨论自动重开。
