@@ -36,7 +36,7 @@ npm view @deepseek-ai/dsh dist-tags version time --json
 1. 监控必须遵循 dist-tag，不能选“semver 最大版本”来冒充 `npx` 默认行为。
 2. latest 会在一次长维修中变化，所以旧任务必须 `SUPERSEDED` 并最终收敛到最新。
 
-根包 `@deepseek-ai/dsh@0.1.1-rc.1` 对大量内部包使用 `^0.1.1-rc.1` 范围，其中包括 `@deepseek-ai/dsh-llm-deepseek`。因此根 version/integrity 相同也不足以复现一次全新安装；证据还必须包含实际 package lock 或完整安装图 digest。
+根包 `@deepseek-ai/dsh@0.1.1-rc.1` 对大量内部包使用 `^0.1.1-rc.1` 范围，其中包括 `@deepseek-ai/dsh-llm-deepseek`。说人话就是：DSH 显示的版本号可能没变，但今天全新安装到的内部组件与前几天不同。同一次测试会用 package lock 固定依赖；以后的巡检则重新模拟今天的全新安装。实际安装内容变化时，会重跑仓库测试、插件 pack/install、dump-config、真实启动和 smoke 断言；这一步运行 Actions，但还不调用 repair model。已经用过自动维修时，测试失败后仍需用户 reset 才能再次花模型额度。
 
 ## 3. 视觉模型在当前发布制品中真实存在
 

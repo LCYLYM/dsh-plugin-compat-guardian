@@ -15,7 +15,8 @@
 - R13 [open] 安装到哪个仓库就只维护哪个仓库；原创插件与魔改 fork 使用同一路径，V1 不读写、同步或通知 upstream；surface: 当前 repository/default branch；evidence: fork 仓库内的独立兼容修复且无任何 upstream 写操作。
 - R14 [open] 最终状态通过 GitHub Summary/Issue 报告，并可选通知 email、Telegram 或通用 webhook；通知是 orchestrator 内的窄适配器，不是独立服务；surface: 去重通知与 secret 边界；evidence: PASS/BLOCKED/SUPERSEDED 的真实消息回读。
 - R15 [open] repair 默认 provider/model 为 `deepseek-official/deepseek-v4-flash-vision-exp`，允许仓库覆盖但不允许运行中漂移或失败后静默回退；视觉断言必须真实传图。启用 DeepSeek 搜索时，将其作为独立 DSH provider 调用，至少记录模型、调用次数和结构化搜索结果；缺少 usage 不阻塞维修，也不做保守整笔预留；surface: DSH model catalog、附件请求与 search seam；evidence: 已发布 DSH 制品中的 `text,image` 声明、真实视觉 probe、真实搜索 probe 和调用账本。
-- R16 [open] 默认价格快照采用 DeepSeek 2026-08-21 官方 CNY 费率和 `Asia/Shanghai` 峰谷窗口，允许仓库覆盖；只有匹配价格映射的 route 才估算 CNY，自定义 route 无映射时仍统计 token 并把 CNY 标为 unknown；版本探测与零模型 gate 立即执行，模型维修默认等待低价窗口，手工运行可显式立即执行；surface: scheduler、price revision 与 campaign 状态；evidence: 峰/谷边界、未知费率、cron 延迟、等待期间 latest 变化和手工 override 测试。
+- R16 [open] 默认价格快照采用 DeepSeek 2026-08-21 官方 CNY 费率和 `Asia/Shanghai` 峰谷窗口，允许仓库覆盖；只有匹配价格映射的 route 才估算 CNY，自定义 route 无映射时仍统计 token 并把 CNY 标为 unknown；版本探测和不调用 repair model 的兼容测试立即执行，模型维修默认等待低价窗口，手工运行可显式立即执行；surface: scheduler、price revision 与 campaign 状态；evidence: 峰/谷边界、未知费率、cron 延迟、等待期间 latest 变化和手工 override 测试。
+- R17 [open] 根 DSH 版本不变但全新安装得到的内部依赖快照变化时，自动重跑仓库测试、插件 pack/install、dump-config、真实 DSH 启动和插件 smoke 断言；这会运行 GitHub Actions，但暂不调用 repair model、不消耗模型 token，也不新建预算。若测试失败且该根版本已经用过自动维修，则冻结并提示用户执行已有的 `N -> Y` reset；surface: lock/Actions/Issue；evidence: 同版本两份依赖快照、完整兼容复测、一次自动维修门和 reset 恢复测试。
 
 Current slice: R0 需求与架构设计
 

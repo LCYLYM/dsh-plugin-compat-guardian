@@ -15,7 +15,8 @@ Project stage: technical
 - 已确认 repair DSH 默认 `0.1.1-rc.1`、repair model 默认 `deepseek-v4-flash-vision-exp`，二者和价格窗口均可覆盖，但每个 campaign 必须冻结实际解析值；同时已锁定差分兼容契约、三种交付模式、campaign 级预算、单次自动维修和 `N -> Y` 人工恢复语义。
 - 已确认视觉由 repair model 提供；官方联网搜索由 DSH 独立 search provider 发起另一笔模型请求，不能混写为同一能力。
 - 已确认 V1 只统计 DSH/DeepSeek 暴露的 token usage，并按默认官方价格映射估算；搜索缺少 usage 时只记调用次数，不做复杂预留，OpenAI-compatible 账单解析不进 V1。provider、base URL、key 环境引用和 model id 均可配置。
+- 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；Actions 仍会运行，但这一步不调用 repair model、不消耗模型 token，也不新建预算。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加配置项。
 
 当前阻塞：无。未决产品细节仅保留在 `docs/DESIGN.md` 的“待继续 grill”小节，不得用旧问题覆盖已确认决策。
 
-下一步：继续锁定少量未决语义（同一根 DSH 版本下依赖图漂移如何触发、首个真实小样）；用户发出实现信号后，打通一个真实插件仓库的窄闭环。
+下一步：确定首个真实插件小样；用户发出实现信号后，打通一个真实插件仓库的窄闭环。

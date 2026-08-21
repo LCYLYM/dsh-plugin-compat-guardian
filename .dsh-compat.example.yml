@@ -4,6 +4,7 @@ watch:
   registry: https://registry.npmjs.org
   package: "@deepseek-ai/dsh"
   channel: latest
+  # 无需额外配置：版本号没变但实际安装内容变化时，会重跑完整兼容测试，但暂不调用维修模型。
   # GitHub cron 只负责唤醒。每次唤醒后再判断版本和价格窗口，不能假设 cron 准点。
   poll_cron: "17 * * * *"
 

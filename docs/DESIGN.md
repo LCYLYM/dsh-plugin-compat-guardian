@@ -57,6 +57,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D15 | DSH 版本、模型、价格、峰谷窗口、预算和交付模式都是有默认值的配置，不是写死在引擎里的常量。 |
 | D16 | `gh-aw` 只作知识参考，V1 没有它的运行时依赖；provider 协议直接复用 DSH 原生实现。 |
 | D17 | V1 只累计 DSH/DeepSeek 暴露的 token usage，并用默认官方价格表估算；不单独实现 OpenAI-compatible 账单解析器。 |
+| D18 | 根 DSH 版本号没变但实际安装内容变了，就重新执行完整兼容测试；此时 Actions 会运行，但暂不调用 repair model、不消耗模型 token，也不增加用户配置或预算。 |
 
 ## 4. 最小架构
 
@@ -91,16 +92,31 @@ flowchart LR
 registry + package + dist-tag + root version + root integrity
 ```
 
-然后在全新临时项目中执行一次真实依赖解析，冻结 package lock，并记录完整安装图 digest。原因是 DSH 根包含 semver 范围依赖：即使根版本和根 integrity 不变，后来发布的子包也可能改变一次全新 `npx` 的实际行为。
+### 为什么版本号没变也可能需要复测
 
-这里有两个不同的键：
+DSH 是由很多内部 NPM 包组成的。根包可能一直显示 `0.1.1-rc.1`，但其中一个内部包允许自动安装更新的小版本，所以两天后的全新 `npx` 实际拿到的内容可能已经不同。
+
+例如：
 
 ```text
-budget key = repository + target root DSH version
-event key  = budget key + root integrity + install graph digest + contract digest
+周一：@deepseek-ai/dsh 0.1.1-rc.1 + 内部 LLM 包 rc.1
+周三：@deepseek-ai/dsh 0.1.1-rc.1 + 内部 LLM 包 rc.2
 ```
 
-依赖图 digest 不会拆出一份新预算；它只让证据可复现，并暴露同根版本下的运行时漂移。
+对用户来说 DSH 版本号没变，但插件面对的代码变了。这里既不是“永远固定旧依赖”，也不是“测试过程中随时升级依赖”：
+
+- **同一次测试或维修中**：用 package lock 锁定所有依赖，保证失败复现、修复和复测面对同一套代码。
+- **以后定时巡检时**：在新的临时目录重新解析一次，检查用户今天全新运行 `npx` 实际会安装什么。
+
+Guardian 不要求用户配置这件事，自动执行下面五步：
+
+1. 在临时目录做一次全新依赖解析，生成“本次实际安装内容”的内部快照；还不启动 DSH，也不调用模型。
+2. 快照没变，直接结束，不重复跑兼容测试。
+3. 快照变了，完整执行仓库测试、插件打包与安装、`dump-config`、真实 `dsh web` 启动、插件专属 smoke 断言以及清理检查。
+4. 上一步会消耗 GitHub Actions 运行时间，但不调用 repair DSH 的模型，所以不产生模型 token。测试通过就更新 lock/报告里的兼容证据。
+5. 测试失败才考虑模型维修：该根版本还没用过自动维修就按正常流程维修；已经维修过或冻结过就只发通知，等用户把 `resetBudget` 从 `N` 改成 `Y`。
+
+内部只把快照保存成一个短指纹 `installGraphDigest`，作用相当于“这次实际安装内容的编号”。用户不填写、不操作它。编号变化不会得到第二份模型预算；预算始终仍是“仓库 + 根 DSH 版本”。
 
 当运行中的目标不再是当前 `latest`：
 
@@ -316,6 +332,7 @@ cost = cache_hit_input * hit_rate
   "campaign": {
     "targetVersion": null,
     "status": "IDLE",
+    "automaticRepairUsed": false,
     "budgetEpoch": 0,
     "consumed": { "tokens": 0, "estimatedCny": 0 }
   },
@@ -335,6 +352,7 @@ cost = cache_hit_input * hit_rate
 - reset 开启新 budget epoch，旧 epoch 的实际消耗保留在报告和累计总额里，不伪装成没花过。
 - 再次 reset 需要新的 `N -> Y` 边沿；用户也可以只提高配置上限，此时保留原 consumed 并获得新增余量。
 - repair agent 不能编辑 lock；用户控制 `control`，publisher 控制运行态和 `verified`。
+- `automaticRepairUsed` 只回答“这个根版本是否已经花过一次自动维修机会”；内部组件变化不会把它偷偷改回 `false`。
 
 ## 15. 交付与通知
 
@@ -393,6 +411,4 @@ V1 不做：
 
 ## 19. 待继续 grill
 
-当前最先要确认的剩余问题：同一个根 DSH 版本可能因为内部包使用 semver 范围，在稍后全新安装时解析出不同依赖图。建议依赖图变化时自动重跑零模型兼容 gate，但预算仍归入同一个 `repository + target root version`；如果再次需要模型维修，而该版本已经维修或冻结过，则等待用户 reset，不自动开启第二份预算。
-
-之后再确定首个真实插件样本。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定首个真实插件样本。其余已经确认的决定不因后续讨论自动重开。
