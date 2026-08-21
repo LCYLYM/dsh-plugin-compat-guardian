@@ -15,8 +15,9 @@ This repository owns the DSH plugin compatibility orchestrator, reusable GitHub 
 - V1 treats the repository where Guardian is installed as the only source of truth. Do not sync, modify, or open pull requests against an original upstream repository.
 - Never grant the candidate runtime a repository write token or the repair runner's long-lived model credential.
 - A repair agent may propose changes; only the independent verifier may produce PASS.
-- Do not weaken gates, budgets, workflow permissions, or path allowlists to make a failing candidate pass.
-- The repair agent must not edit the compatibility contract, workflow, or generated `verified` state. A separate publisher owns PR, auto-merge, and explicitly enabled direct-push delivery.
+- The default edit boundary is all tracked plugin files in the current repository, not a repository-specific long allowlist. Mechanically reject changes to `.github/workflows/**`, Guardian config/lock, the onboarding smoke contract, the independent verifier, secrets/credentials, and paths resolving outside the repository.
+- Do not weaken gates, budgets, workflow permissions, or the protected-path denylist to make a failing candidate pass.
+- The repair agent must not edit the compatibility contract, workflow, or generated `verified` state. A separate publisher validates the diff boundary and owns PR, auto-merge, and explicitly enabled direct-push delivery.
 - A failed campaign must not advance `.dsh-compat.lock.json#verified`. A budget reset is an edge-triggered user control, not a standing permission to retry forever.
 - Do not commit raw agent transcripts, copied Codex records, secrets, local paths, temporary DSH homes, runtime logs, or generated caches.
 - Preserve the acceptance IDs in `ACCEPTANCE.md`; changing or deleting one requires an explicit user decision.

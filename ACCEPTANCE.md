@@ -9,7 +9,7 @@
 - R7 [open] 每个目标 DSH 版本只自动启动一个有界 campaign；失败后冻结，定时触发不再调模型，直到收到明确新信号；surface: 状态机、campaign Issue 和 Actions concurrency；evidence: 重放、重复事件、失败冻结和自身提交测试。
 - R8 [open] repair DSH 直接使用它自身支持的 provider/settings/credential 契约；仓库可配置 provider id、base URL、key 的环境变量引用和 model id，API key 仅由仓库 secret 或原生 CI 身份注入，不写入日志、报告或 commit；surface: DSH 原生 provider 与 CI secret 边界；evidence: 默认与自定义 route 的真实请求、usage 事件、secret 扫描与脱敏测试。
 - R9 [open] V1 通过 onboarding PR 安装到当前插件仓库，不引入中央托管、GitHub App 多仓库控制面或 `gh-aw` 运行时依赖；surface: 薄 workflow + reusable workflow/orchestrator；evidence: 在一个真实插件仓库中从安装到运行的闭环。
-- R10 [open] onboarding 时由 DSH 从 manifest、源码、README 和现有测试自动发现 smoke surface，接受用户提示，生成机器可执行契约供用户首次审核；surface: `.dsh-compat.yml` 与 `compat/smoke.*`；evidence: 已审核契约、覆盖范围报告和“维修过程不得改测试”回归。
+- R10 [open] onboarding 时由 DSH 从 manifest、源码、README 和现有测试自动发现 smoke surface，接受用户提示，生成机器可执行契约供用户首次审核；surface: `.dsh-compat.yml` 与 `compat/smoke.*`；evidence: 已审核契约、覆盖范围报告和“维修过程不得改 onboarding contract/verifier”回归。
 - R11 [open] 支持 `pull-request`（默认）、`auto-merge` 和显式开启的 `direct-push`；三种模式均由独立 publisher 持写凭据，不由 repair DSH 直接 push；surface: GitHub branch/PR/default branch；evidence: 权限隔离、branch protection 失败和三模式端到端测试。
 - R12 [open] 预算耗尽后，用户可通过提高额度或提交 `.dsh-compat.lock.json` 中 `N -> Y` 的单次 reset 边沿恢复同版本 campaign；同一 reset commit 只消费一次，静态 `Y` 不重复触发；surface: push diff、campaign 账本和恢复状态；evidence: rerun/schedule 幂等性与二次手工 reset 测试。
 - R13 [open] 安装到哪个仓库就只维护哪个仓库；原创插件与魔改 fork 使用同一路径，V1 不读写、同步或通知 upstream；surface: 当前 repository/default branch；evidence: fork 仓库内的独立兼容修复且无任何 upstream 写操作。
@@ -18,6 +18,7 @@
 - R16 [open] 默认价格快照采用 DeepSeek 2026-08-21 官方 CNY 费率和 `Asia/Shanghai` 峰谷窗口，允许仓库覆盖；只有匹配价格映射的 route 才估算 CNY，自定义 route 无映射时仍统计 token 并把 CNY 标为 unknown；版本探测和不调用 repair model 的兼容测试立即执行，模型维修默认等待低价窗口，手工运行可显式立即执行；surface: scheduler、price revision 与 campaign 状态；evidence: 峰/谷边界、未知费率、cron 延迟、等待期间 latest 变化和手工 override 测试。
 - R17 [open] 根 DSH 版本不变但全新安装得到的内部依赖快照变化时，自动重跑仓库测试、插件 pack/install、dump-config、真实 DSH 启动和插件 smoke 断言；这会运行 GitHub Actions，但暂不调用 repair model、不消耗模型 token，也不新建预算。若测试失败且该根版本已经用过自动维修，则冻结并提示用户执行已有的 `N -> Y` reset；surface: lock/Actions/Issue；evidence: 同版本两份依赖快照、完整兼容复测、一次自动维修门和 reset 恢复测试。
 - R18 [open] M0 分两阶段验收：第一阶段不配置模型 key，只证明监控、真实兼容测试、报告、lock 和去重；第二阶段才在隔离测试分支恢复历史 `httpServer` 旧接口错误，启用 repair model，要求机器人产出通过原始 verifier 的修复 PR。两阶段均关闭 auto-merge/direct-push；surface: public fixture branch/Actions/PR；evidence: 无模型运行记录、受控失败复现、修复 diff 和可合并但未自动合并的 PR。
+- R19 [open] repair DSH 默认可修改仓库内所有已跟踪的插件文件，不要求仓库配置长 allowlist；必须机械拒绝对 `.github/workflows/**`、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外解析路径的修改；surface: repair worktree/diff publisher；evidence: 允许源码、manifest、脚本、测试和文档修改的正例，以及每类禁止路径被拒绝的负例。
 
 Current slice: R0 需求与架构设计
 

@@ -18,6 +18,7 @@ Project stage: technical
 - 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；Actions 仍会运行，但这一步不调用 repair model、不消耗模型 token，也不新建预算。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加配置项。
 - 已从公开正式仓库 `LCYLYM/dsh-attachments@028dc1f` 全新复制并创建独立 public fixture：`LCYLYM/dsh-attachments-guardian-fixture`。fixture `main@17edf22` 与远端一致、不是 GitHub fork、保留完整源历史，10/10 测试和 `npm pack --dry-run` 通过；README 已标明测试用途，`private: true` 防止误发 NPM。
 - 已确认 M0 分两步：先在没有模型 key 的情况下证明监控、真实兼容测试、报告和去重；再在隔离测试分支恢复历史 `httpServer` 旧错误，验证模型维修和 PR。两个阶段都不开 auto-merge/direct-push。
+- 已确认 repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，包括源码、manifest、安装脚本、仓库测试和文档；不维护逐仓库长 allowlist。短禁止清单保护 workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径，最终 PASS 由这些不可修改的验收面决定。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

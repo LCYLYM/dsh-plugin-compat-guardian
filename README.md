@@ -20,4 +20,6 @@ repair DSH 默认使用 `0.1.1-rc.1`，provider/model 默认使用 `deepseek-off
 
 默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，只有确实需要修代码时才等待低价时段调用模型。MVP 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；不单独实现 OpenAI-compatible 账单解析。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。交付默认为 PR，同时支持显式开启 `auto-merge` 或 `direct-push`。
 
+维修时默认允许改当前仓库内所有已跟踪的插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
+
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

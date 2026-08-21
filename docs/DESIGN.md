@@ -60,6 +60,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D18 | 根 DSH 版本号没变但实际安装内容变了，就重新执行完整兼容测试；此时 Actions 会运行，但暂不调用 repair model、不消耗模型 token，也不增加用户配置或预算。 |
 | D19 | M0 先在没有模型 key 的情况下验证监控与完整兼容测试；通过后才在隔离测试分支恢复历史 `httpServer` 错误，验证模型维修和 PR。两个阶段均不开自动合并或直接推送。 |
 | D20 | 当前处于 grilling 阶段；用户明确宣布 grilling 结束并要求开工前，只允许调研和文档，不实施 workflow、故障场景、secrets 或模型调用。 |
+| D21 | repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret 和仓库外路径进入短禁止清单。 |
 
 ## 4. 最小架构
 
@@ -260,7 +261,9 @@ model:      deepseek-v4-flash-vision-exp
 - 上一轮 diff、verifier 结果和失败签名；
 - 可修改/禁止路径、剩余预算和 deadline。
 
-默认允许插件源码、测试、文档和必要 lockfile；禁止修改 workflow、Guardian/verifier、compatibility contract、预算、控制 lock、secret 和仓库外路径。
+默认可修改当前仓库内所有已跟踪的插件文件，包括源码、`src/lib`、`cordis.patch.yml`、`package.json`、安装脚本、仓库测试和文档。插件结构差异很大，因此不要求用户为每个仓库维护一份长 allowlist。
+
+短禁止清单保护控制面和独立验收面：`.github/workflows/**`、`.dsh-compat.yml`、`.dsh-compat.lock.json`、onboarding smoke contract、独立 verifier、secret/凭据文件，以及解析后落到仓库外的路径。禁止项不能由 repair prompt、仓库文件或模型输出放宽；publisher 只接受禁止路径之外的 diff。最终 PASS 仍由 repair DSH 无法修改的 contract/verifier 判定。
 
 默认最多两轮。每轮结束后 agent 只能交付 diff；独立 verifier 从干净副本应用 diff 并重新执行原始合同。
 
@@ -422,4 +425,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定一次 campaign 到底允许 repair DSH 修改哪些文件，以及依赖升级、生成文件和测试修改分别如何处理。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定 repair diff 一旦修改仓库测试或测试命令，是否仍允许自动合并/直接推送。依赖升级和生成文件策略随后再定。其余已经确认的决定不因后续讨论自动重开。
