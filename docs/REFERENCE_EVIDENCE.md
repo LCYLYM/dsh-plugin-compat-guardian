@@ -127,6 +127,7 @@ DeepSeek 当前官方文档明确：
 ## 7. GitHub Actions 约束
 
 - reusable workflow 的 secrets 需要调用方显式传递；job/workflow 应使用最小 `permissions`。
+- 跨仓库 reusable workflow 可以引用 SHA、release tag 或 branch；GitHub 明确把 commit SHA 描述为稳定性与安全性最可靠的选择。完整 commit SHA 是当前唯一不可移动的引用方式，因此插件仓库必须用 SHA 固定 Guardian 引擎。
 - 仓库 `GITHUB_TOKEN` 触发的大多数事件不会递归创建新 run，但 `workflow_dispatch`、`repository_dispatch` 等有例外，不能作为唯一防循环门。
 - concurrency 可以取消同组旧 run，但旧进程仍要在发布前再次确认 current latest。
 - scheduled workflow 可能延迟，高负载时可能丢弃；默认分支才是 schedule 定义来源。
@@ -136,6 +137,7 @@ DeepSeek 当前官方文档明确：
 官方来源：
 
 - [Reusable workflows](https://docs.github.com/en/actions/how-tos/sharing-automations/reusing-workflows)
+- [Secure use reference：pin full-length commit SHA](https://docs.github.com/en/actions/reference/security/secure-use)
 - [Workflow permissions 与 `GITHUB_TOKEN`](https://docs.github.com/en/actions/concepts/security/github_token)
 - [Workflow concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 - [Events that trigger workflows：schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)

@@ -72,6 +72,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
 | D31 | campaign 锁定启动时的默认分支 commit。发布前若分支已前进，旧 attempt 进入 `STALE_SOURCE` 且不得发布；下一次只先对新 commit 做无模型复测。此前未调用模型则保留唯一维修机会，已经调用则必须 reset 才能再次调模型。 |
 | D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
+| D33 | 插件 workflow 用完整 commit SHA 引用 Guardian reusable workflow，并注释人类可读版本；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA；以后确需升级时由用户手工改一行或重跑安装。 |
 
 ## 4. 最小架构
 
@@ -184,7 +185,7 @@ stateDiagram-v2
 
 首次安装会生成 onboarding PR，内容限定为：
 
-- `.github/workflows/dsh-compat.yml`：薄调用入口和明确的最小权限；
+- `.github/workflows/dsh-compat.yml`：薄调用入口和明确的最小权限；Guardian reusable workflow 使用完整 commit SHA，并在旁边注释对应发布版本；
 - `.dsh-compat.yml`：仓库配置；
 - `compatibility/dsh-smoke.yml` 及必要脚本：机器可执行兼容 contract；
 - `.dsh-compat.lock.json`：空的 verified 状态和控制位；
@@ -418,6 +419,7 @@ cost = cache_hit_input * hit_rate
 ## 16. GitHub Actions 边界
 
 - reusable workflow 的 secrets 必须显式传入；默认 job 使用 read-only `GITHUB_TOKEN`。
+- 外部 Guardian reusable workflow 必须锁完整 commit SHA，不能引用可移动的 `main`/`v1`。该 SHA 只固定 Guardian 引擎，candidate DSH 仍在运行时解析 NPM latest；V1 不增加 Guardian 自更新检查或自动更新 PR。
 - candidate/verifier job 与 publisher job 分权；不让不可信 artifact 直接变成有权限脚本。
 - 使用 concurrency、job timeout 和确定分支；GitHub 自带的 `GITHUB_TOKEN` 防递归规则只是第二道防线。
 - scheduled workflow 只在默认分支定义生效，可能延迟；公开仓库长期无活动还可能被自动禁用，所以 cron 只是唤醒器。
@@ -434,6 +436,7 @@ V1 不做：
 - 默认遍历所有历史 DSH 版本；
 - 独立通知 gateway 服务；
 - 自动修改兼容 contract 以换取 PASS；
+- Guardian 自升级检测、自动更新 workflow PR，或随每个 DSH 版本改写 Guardian SHA；
 - 绕过 branch protection、secret policy 或 verifier。
 
 ## 18. 实现顺序
@@ -465,4 +468,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定插件仓库里的薄 workflow 应按精确 commit 还是可移动 tag 引用 Guardian reusable workflow。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定 DSH 兼容测试直接 PASS、没有代码修复时，是否仍按交付模式提交 verified lock 记录。其余已经确认的决定不因后续讨论自动重开。

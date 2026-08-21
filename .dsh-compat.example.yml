@@ -17,17 +17,9 @@ repair:
   start_policy: low-price-window # immediate | low-price-window
   allow_manual_price_override: true
   max_attempts: 2
-  allowed_paths:
-    - lib/**
-    - src/**
-    - test/**
-    - tests/**
-    - docs/**
-    - package.json
-    - package-lock.json
-    - pnpm-lock.yaml
-  denied_paths:
-    - .github/**
+  # 普通仓库文件默认可修改，只保护控制面与独立验收面，不维护长 allowlist。
+  protected_paths:
+    - .github/workflows/**
     - .dsh-compat.yml
     - .dsh-compat.lock.json
     - compatibility/**

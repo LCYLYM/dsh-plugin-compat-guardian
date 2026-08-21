@@ -44,4 +44,6 @@ repair model 的 key 只会在可信默认分支上的定时、手工或默认�
 
 每个目标 DSH 版本使用独立维修 PR。PR 还没合并而 latest 又更新时，旧 PR 会标记 `SUPERSEDED` 并关闭，历史仍保留；新版本从当前默认分支重新验证，确实需要时另开 PR，不把两个版本混在同一个 PR 里。
 
+插件里的薄 workflow 使用完整 commit SHA 固定 Guardian 引擎，旁边标注版本；DSH 更新不会改这行。V1 不检查 Guardian 自身更新，也不创建 Guardian 更新 PR。以后确实需要升级 Guardian 时，用户手工替换这一行 SHA 或重新运行安装即可。
+
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。
