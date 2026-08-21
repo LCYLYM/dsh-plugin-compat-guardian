@@ -22,4 +22,6 @@ repair DSH 默认使用 `0.1.1-rc.1`，provider/model 默认使用 `deepseek-off
 
 维修时默认允许改当前仓库内所有已跟踪的插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
 
+仓库测试也可以由机器人提案修改，但只要维修 diff 改了测试文件、测试配置或测试命令，本次就强制生成普通 PR，不能自动合并或直接推送，必须由人检查是否在“改答案”。没有修改测试面的维修仍按仓库选择的交付模式执行。
+
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

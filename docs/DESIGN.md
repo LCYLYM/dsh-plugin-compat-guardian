@@ -61,6 +61,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D19 | M0 先在没有模型 key 的情况下验证监控与完整兼容测试；通过后才在隔离测试分支恢复历史 `httpServer` 错误，验证模型维修和 PR。两个阶段均不开自动合并或直接推送。 |
 | D20 | 当前处于 grilling 阶段；用户明确宣布 grilling 结束并要求开工前，只允许调研和文档，不实施 workflow、故障场景、secrets 或模型调用。 |
 | D21 | repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret 和仓库外路径进入短禁止清单。 |
+| D22 | repair DSH 可以提案修改仓库测试，但只要 diff 触及测试文件、测试配置或测试命令，本次交付就强制为普通 PR；即使仓库开启 auto-merge/direct-push，也必须人工审核后才能落库。 |
 
 ## 4. 最小架构
 
@@ -265,6 +266,8 @@ model:      deepseek-v4-flash-vision-exp
 
 短禁止清单保护控制面和独立验收面：`.github/workflows/**`、`.dsh-compat.yml`、`.dsh-compat.lock.json`、onboarding smoke contract、独立 verifier、secret/凭据文件，以及解析后落到仓库外的路径。禁止项不能由 repair prompt、仓库文件或模型输出放宽；publisher 只接受禁止路径之外的 diff。最终 PASS 仍由 repair DSH 无法修改的 contract/verifier 判定。
 
+仓库自己的测试允许随兼容修复一起提案修改，但不能让机器人同时修改测试又自动把结果落进默认分支。publisher 在 diff 中发现测试文件、测试配置，或 `package.json` 等 manifest 里的测试命令发生变化时，必须把本次交付强制降级为普通 PR，并在报告里列出触发路径；仓库配置的 `auto-merge`/`direct-push` 只对没有改动测试面的维修生效。新增测试也按测试改动处理。
+
 默认最多两轮。每轮结束后 agent 只能交付 diff；独立 verifier 从干净副本应用 diff 并重新执行原始合同。
 
 ## 12. Campaign 预算
@@ -425,4 +428,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定 repair diff 一旦修改仓库测试或测试命令，是否仍允许自动合并/直接推送。依赖升级和生成文件策略随后再定。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定依赖改动的允许范围，以及哪些依赖变更必须强制人工 PR。生成文件策略随后再定。其余已经确认的决定不因后续讨论自动重开。
