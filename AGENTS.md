@@ -8,7 +8,8 @@ This repository owns the DSH plugin compatibility orchestrator, reusable GitHub 
 
 - Keep the watched candidate DSH runtime separate from the pinned repair runner.
 - Treat `0.1.1-rc.1`, `deepseek-v4-flash-vision-exp`, and the bundled DeepSeek tariff windows as overridable defaults, not engine constants. Resolve and pin the effective DSH version, provider, model, price revision, and package graph for each campaign.
-- Do not describe DeepSeek web search as a capability built into the vision model. It is a separate DSH provider call and its model, usage, and result must be reported independently.
+- Do not describe DeepSeek web search as a capability built into the vision model. It is a separate DSH provider call; report its selected model, result, and call count, plus usage only when DSH exposes it.
+- V1 may configure any provider id, base URL, credential environment reference, and model id already supported by DSH. Do not build a parallel provider protocol or OpenAI billing parser; the default accounting contract is DSH-normalized DeepSeek usage plus a versioned official price map.
 - V1 treats the repository where Guardian is installed as the only source of truth. Do not sync, modify, or open pull requests against an original upstream repository.
 - Never grant the candidate runtime a repository write token or the repair runner's long-lived model credential.
 - A repair agent may propose changes; only the independent verifier may produce PASS.

@@ -44,7 +44,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D2 | 只追踪 NPM `latest` 并最终收敛到最新；不为每个中间发布排队。 |
 | D3 | candidate 与 repair runner 是两个隔离角色；candidate 无模型长期密钥和 Git 写权限。 |
 | D4 | repair DSH 默认 `0.1.1-rc.1`，允许配置为其他固定版、`latest` 或 `target`；每轮开始时解析成精确制品并冻结。 |
-| D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`，允许仓库覆盖；失败不得静默换模型。 |
+| D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`；provider id、base URL、key 环境引用和 model id 均可覆盖，失败不得静默换 route。 |
 | D6 | 视觉由所选模型的图片输入能力提供；DeepSeek 联网搜索是 DSH 的独立 search provider 调用，不把两者混称为一个能力。 |
 | D7 | onboarding 由 DSH 自动发现 smoke surface，用户可给自然语言 hints；用户只需审核首次 onboarding PR，contract 变化另开 PR。 |
 | D8 | 兼容结论必须是差分测试和机器断言；repair agent 的文字声明不算 PASS，也不能在同一维修中改弱 contract。 |
@@ -56,6 +56,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D14 | GitHub Summary/Issue 是默认报告面；email、Telegram 和 webhook 是 orchestrator 内的可选小适配器。 |
 | D15 | DSH 版本、模型、价格、峰谷窗口、预算和交付模式都是有默认值的配置，不是写死在引擎里的常量。 |
 | D16 | `gh-aw` 只作知识参考，V1 没有它的运行时依赖；provider 协议直接复用 DSH 原生实现。 |
+| D17 | V1 只累计 DSH/DeepSeek 暴露的 token usage，并用默认官方价格表估算；不单独实现 OpenAI-compatible 账单解析器。 |
 
 ## 4. 最小架构
 
@@ -225,7 +226,7 @@ provider:   deepseek-official
 model:      deepseek-v4-flash-vision-exp
 ```
 
-这些只是仓库可覆盖的默认值，不是引擎常量。无论用户填固定版本、`latest` 还是 `target`，campaign 开始后都解析并记录实际 DSH version/integrity/install graph、provider 和 model；后续轮次不允许漂移，失败也不静默回退到另一个模型。
+这些只是仓库可覆盖的默认值，不是引擎常量。用户可以配置 DSH 已支持的 provider id、base URL、API key 环境变量引用和 wire model id。无论用户填固定版本、`latest` 还是 `target`，campaign 开始后都解析并记录实际 DSH version/integrity/install graph、provider、base URL identity 和 model；后续轮次不允许漂移，失败也不静默回退到另一个 route。Guardian 不再实现一层 provider 协议。
 
 当前官方 DSH 发布制品已把默认模型声明为 `inputModalities: [text, image]`，所以 repair agent 可以直接查看失败截图、页面渲染、图表或插件 UI，而不需要另造视觉 sidecar。
 
@@ -254,7 +255,7 @@ hard stop = token / CNY / wall time / attempt 任一启用上限耗尽
 steer     = 任一主要预算剩余比例 <= 30%，且本 campaign 尚未发送过
 ```
 
-所有由本 campaign 引起的模型调用都应记账，包括主 repair session、子 agent、压缩、重试和独立 DeepSeek 搜索。
+MVP 累计 DSH/DeepSeek 已经暴露的 token usage，包括主 repair session、子 agent、压缩和重试。独立 DeepSeek 搜索目前不暴露 usage，因此只记录调用次数、所选模型和结果状态，不为这点小额误差另造计费通道。
 
 人民币按带 revision 的 provider/model/tariff 快照估算：
 
@@ -264,7 +265,9 @@ cost = cache_hit_input * hit_rate
      + output * output_rate
 ```
 
-图片由官方按尺寸换算为输入 token，随 provider usage 进入同一预算。当前 DSH 搜索 provider 会发完整模型请求，但没有把响应 usage 暴露给消费方；MVP 可在发起搜索前按配置的 `maxTokens` 和固定输入上界做保守预留，之后无法对账时不返还。这样可能提前停止，但不会用“未知即零成本”制造假余额。要求账单级绝对上限时仍需 provider 侧额度代理。
+图片由官方按尺寸换算为输入 token，随 provider usage 进入同一预算。搜索等未暴露 usage 的辅助调用不会伪造 token 数：报告单列 `unmeteredSearchCalls`，token/CNY 总数注明只覆盖已报告 usage。因此本地 hard stop 是基于可见 usage 的工程上限，不是供应商账单保证；需要绝对金额上限时仍由 provider 侧限额负责。
+
+默认只实现 DeepSeek 官方 usage 口径。OpenAI-compatible route 可以通过 DSH 原生 provider 使用，但 V1 不另写 OpenAI usage/账单解析器；若 DSH 已把它归一化为标准 usage，就自然进入 token 统计，否则只报告缺失。自定义 provider/model/base URL 没有匹配价格映射时仍执行 token 上限，CNY 显示 `unknown`，用户可覆盖 price map。
 
 剩余 30% 时只发送一次：
 
@@ -284,7 +287,7 @@ cost = cache_hit_input * hit_rate
 | 低价 | 0.05 | 1.50 | 4.50 |
 | 高峰 | 0.10 | 3.00 | 9.00 |
 
-默认时区 `Asia/Shanghai`；每日高峰为 `09:00–12:00`、`14:00–18:00`，其余时间为低价。所有值均可由仓库覆盖，并把 source、revision、timezone 和生效费率写入证据；自定义 base URL 不能套用官方价格而不声明。
+默认时区 `Asia/Shanghai`；每日高峰为 `09:00–12:00`、`14:00–18:00`，其余时间为低价。所有值均可由仓库覆盖，并把 source、revision、timezone 和生效费率写入证据；自定义 route 只有显式声明沿用官方计价或提供自己的 price map，才计算 CNY，否则只统计 token。
 
 调度规则：
 
@@ -386,10 +389,10 @@ V1 不做：
 
 ### M3：预算、搜索与交付
 
-接入 usage 去重、人民币价格快照、搜索保守预留、30% steer、hard stop、PR/auto-merge/direct-push 和通知适配器。
+接入 DeepSeek usage 去重、人民币价格快照、搜索调用计数、30% steer、基于可见 usage 的 hard stop、PR/auto-merge/direct-push 和通知适配器。
 
 ## 19. 待继续 grill
 
-当前最先要确认的剩余问题：DSH 的独立 DeepSeek 搜索调用目前不暴露精确 usage。建议默认在每次搜索前按允许的最大输出和保守输入上界整笔预留，宁可提前停止；如果用户要求账单级硬上限，则必须关闭搜索或配置 provider 侧限额代理。
+当前最先要确认的剩余问题：同一个根 DSH 版本可能因为内部包使用 semver 范围，在稍后全新安装时解析出不同依赖图。建议依赖图变化时自动重跑零模型兼容 gate，但预算仍归入同一个 `repository + target root version`；如果再次需要模型维修，而该版本已经维修或冻结过，则等待用户 reset，不自动开启第二份预算。
 
 之后再确定首个真实插件样本。其余已经确认的决定不因后续讨论自动重开。

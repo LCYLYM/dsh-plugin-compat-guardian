@@ -99,7 +99,7 @@ DeepSeek 当前官方文档明确：
 
 因此产品默认可以把 repair 和搜索都配置为 `deepseek-v4-flash-vision-exp`，但必须运行真实搜索 probe；“模型支持视觉”本身不能证明 native web search 已工作，也不能把搜索费用算进主会话一次调用。
 
-当前源码只持久化无密钥搜索请求，没有把 Anthropic 响应的 usage 映射给消费方；严格预算不能把这类调用当作零 token。设计采用调用前保守预留，账单级硬上限仍需 provider 侧额度代理。
+当前源码只持久化无密钥搜索请求，没有把 Anthropic 响应的 usage 映射给消费方。V1 接受这点小额误差：只记录搜索调用次数，不做复杂预留；总 token/CNY 明确标注只覆盖 DSH 已暴露的 usage。账单级硬上限不属于本地估算承诺，应由 provider 侧额度负责。
 
 官方来源：
 
