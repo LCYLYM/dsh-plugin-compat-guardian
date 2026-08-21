@@ -71,6 +71,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置/lock 变更触发；普通源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
 | D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
 | D31 | campaign 锁定启动时的默认分支 commit。发布前若分支已前进，旧 attempt 进入 `STALE_SOURCE` 且不得发布；下一次只先对新 commit 做无模型复测。此前未调用模型则保留唯一维修机会，已经调用则必须 reset 才能再次调模型。 |
+| D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
 
 ## 4. 最小架构
 
@@ -392,6 +393,7 @@ cost = cache_hit_input * hit_rate
 - 同一 SHA 在 workflow rerun 或 schedule 中只消费一次；静态 `Y` 不会反复充值。
 - 每个 attempt 在开始时记录 `basePluginCommit`。publisher 执行任何 PR 更新、auto-merge 或 direct-push 前重新读取默认分支 SHA；不一致就写入 `STALE_SOURCE`，不得发布旧 diff。
 - 下一次定时或手工检查对新 SHA 先执行无模型 gate。旧 attempt 尚未调用模型时，campaign 仍保留那一次自动维修机会；已经调用过时，源码变化本身不能再送一次模型预算，失败后继续等待 reset。
+- 维修 PR 使用包含目标版本的确定分支/标题。PR 尚未合并而 NPM latest 变化时，publisher 给旧 PR 写入 `SUPERSEDED` 原因并关闭；PR、评论、checks 和 commits 继续作为历史证据。新目标始终从当时默认分支重新开始，不 force-push、不改写旧 PR，也不把两个目标版本的证据放在同一个 PR。
 - reset 开启新 budget epoch，旧 epoch 的实际消耗保留在报告和累计总额里，不伪装成没花过。
 - 再次 reset 需要新的 `N -> Y` 边沿；用户也可以只提高配置上限，此时保留原 consumed 并获得新增余量。
 - repair agent 不能编辑 lock；用户控制 `control`，publisher 控制运行态和 `verified`。
@@ -463,4 +465,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定维修 PR 尚未合并时 NPM latest 又变化，旧 PR 是关闭重开还是复用为当前 latest。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定插件仓库里的薄 workflow 应按精确 commit 还是可移动 tag 引用 Guardian reusable workflow。其余已经确认的决定不因后续讨论自动重开。
