@@ -77,6 +77,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
 | D36 | DeepSeek 官方搜索默认允许且由 repair DSH 按需使用；默认提示词建议把官方标准、文档和源码作为辅助证据。Guardian 不设置搜索次数/uses 专属上限，搜索仍受整体 60 分钟运行边界和 provider 自身限制。 |
 | D37 | candidate 默认不调用模型。只有 onboarding 已审核的 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 执行一次固定真实回合；usage 计入同一 campaign，缺 key 为 `BLOCKED`。V1 不建设 ephemeral proxy。 |
+| D38 | 真实模型 smoke 只按固定输入与可重复机械证据判定：插件实际处理输入、所需附件/图片进入模型请求、provider 成功返回且 DSH 收到非空结果。不得匹配具体回答措辞或主观质量；用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。 |
 
 ## 4. 最小架构
 
@@ -205,6 +206,8 @@ DSH 默认从 `package.json`/manifest、源码入口、README、已有 test/buil
 
 默认 contract 不调用模型。只有插件能力确实无法通过本地事件、页面、CLI 或 API 证明时，onboarding PR 才可在 contract 中写入 `requires_model_turn: true`，同时固定输入、预期机械断言和所用 fixture。用户合并这份 contract 就表示同意后续 candidate 验证在单独 smoke step 临时使用仓库配置的同一套 provider/model/Secret；这不是每次版本更新都要再次授权的新开关。
 
+模型输出本身有随机性，contract 不能要求回答出现某个固定句子，也不能让另一个模型主观打分。默认 PASS 只证明：固定输入已由插件真实处理；附件/图片等声明输入确实进入模型请求；provider 成功返回；DSH 消费到非空最终结果。用户可以在 onboarding PR 中增加插件自己的确定性事件、文件、API 或页面断言，但维修过程不得修改这些断言。
+
 插件新增入口或主要能力时才需要再次审核 contract PR，不要求每个 DSH 新版本都人工重审同一合同。
 
 onboarding PR 合并后，lock 里还没有历史 `verified`。这时不增加一个新的 baseline 配置项，而是先把本轮已解析并冻结的 repair DSH 当作启动参照（默认 `0.1.1-rc.2`），在当前插件树上执行同一套完整 gate：
@@ -230,7 +233,7 @@ onboarding PR 合并后，lock 里还没有历史 `verified`。这时不增加�
 | G2 安装生命周期 | fresh `DSH_HOME` 中真实 pack/add、dump-config、remove、再次 dump。 |
 | G3 真实启动 | 动态端口启动真实 `dsh web`/headless，HTTP 与进程生命周期正常。 |
 | G4 插件行为 | 至少一个插件专属 CLI/API/浏览器断言，不只检查首页 200。 |
-| G5 模型/视觉（contract 要求时） | 在单独 step 执行一次固定真实模型回合；视觉插件必须传入并消费真实图片或截图，不能用文字替代图片。缺少所需凭据时为 `BLOCKED`。 |
+| G5 模型/视觉（contract 要求时） | 在单独 step 执行固定真实模型回合；断言插件处理、请求中的真实附件/图片、provider 成功和 DSH 非空结果，不匹配回答措辞或主观质量。缺少所需凭据时为 `BLOCKED`。 |
 | G6 清理与幂等 | 端口释放、进程回收、重复安装/卸载不污染下一轮。 |
 | G7 交付安全 | 保护路径 denylist、secret scan、contract digest 和报告 schema 均通过。 |
 
@@ -479,4 +482,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定真实模型 smoke 应断言哪些机械事实，避免把模型回答的具体文案当成兼容 PASS。其余已经确认的决定不因后续讨论自动重开。
+下一轮批量确定模型 smoke 的差分次数、执行时机、外部失败处理和证据留存。其余已经确认的决定不因后续讨论自动重开。

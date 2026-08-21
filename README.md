@@ -54,4 +54,6 @@ repair DSH 默认可以按需使用 DeepSeek 官方搜索，提示词会建议�
 
 待测试的新 DSH 默认拿不到模型 key。只有 onboarding PR 中已审核的 smoke contract 明确写了 `requires_model_turn: true`，才会在一个无 Git 写权限的独立步骤里，用仓库配置的同一套 provider、model 和 Secret 跑一次固定真实模型回合；这次用量计入同一版本预算，缺 key 就报告 `BLOCKED`。V1 不增加临时代理服务，因此该测试进程在这一步确实能接触 key，这是启用真实模型 smoke 时需要接受的边界。
 
+真实模型 smoke 不检查模型必须回答某句话，也不评价回答“好不好”。它只检查固定输入确实被插件处理、附件或图片确实进入模型请求、provider 成功返回、DSH 收到非空结果；用户可在 onboarding contract 中增加更强的确定性断言，但维修机器人不能修改它。
+
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

@@ -35,6 +35,7 @@ Project stage: technical
 - 已确认默认 campaign 上限为 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和最多 2 轮维修，任一先到即停；剩余 30% 时默认只发一次收敛消息，等待低价窗口不计入 60 分钟。全部数值可覆盖。
 - 已确认 repair DSH 默认允许使用 DeepSeek 官方搜索但不要求每轮都搜；提示词建议查官方标准、文档、源码和 NPM 元数据作辅助。Guardian 不设搜索专属次数/uses 上限，失败只记录并继续本地诊断，不换模型、不代替 verifier；整体 60 分钟和 provider 限制仍有效。
 - 已确认 candidate 默认不调用模型；只有 onboarding 已审核 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 跑一次固定真实回合。usage 计入同一版本预算，缺 key 为 `BLOCKED`；V1 删除 `ephemeral-proxy` 方案，并明确 candidate 在该 step 内能接触 key 的风险。
+- 已确认真实模型 smoke 不匹配具体回答措辞，也不做主观质量评分；PASS 只看固定输入被插件处理、附件/图片确实进入请求、provider 成功且 DSH 收到非空结果。用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

@@ -35,6 +35,7 @@
 - R33 [open] 默认 campaign 限额为 1,000,000 总 token、估算 10 CNY、60 分钟实际 repair/verifier 运行时间和 2 个 repair attempt，任一先耗尽即停止；30% 剩余提醒默认开启且只发一次，等待低价窗口不计时；surface: budget ledger/state machine/model request gate；evidence: 四种单独耗尽、跨 run 累计、一次 steer、等待不计时和单请求尾差测试。
 - R34 [open] repair DSH 默认可按需使用 DeepSeek 官方搜索，提示词建议优先查官方标准、文档、源码和 NPM 元数据作为辅助；Guardian 不配置搜索专属调用/uses 上限，搜索不可用只记录且不静默换模型、不替代 verifier、不单独判兼容失败，整体运行墙钟和 provider 限制仍有效；surface: repair prompt/search provider/report；evidence: 使用、不使用、不可用和无静默回退四类真实运行记录。
 - R35 [open] candidate 默认不得获得模型凭据；只有 onboarding 已审核 contract 声明 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 临时注入仓库同一套 provider/model/Secret 并执行一次固定真实回合，usage 计入同一 `repository + target version` campaign，缺 key 必须为 `BLOCKED`；V1 不建设 ephemeral proxy，普通 PR/fork/任意 ref 仍不得获得 secret；surface: smoke contract/job permissions/budget ledger；evidence: 默认无 key、显式真实回合、缺 key、PR secret 拒绝和 usage 累计五类运行记录。
+- R36 [open] contract-required 真实模型 smoke 只能按固定输入和可重复机械事实判定：插件处理输入、声明附件/图片进入模型请求、provider 成功、DSH 消费非空结果；不得匹配具体回答措辞或主观质量。用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改；surface: smoke contract/request trace/verifier；evidence: 随机措辞仍 PASS、附件未进入请求 FAIL、空结果 FAIL 和 contract 防篡改测试。
 
 Current slice: R0 需求与架构设计
 
