@@ -46,4 +46,6 @@ repair model 的 key 只会在可信默认分支上的定时、手工或默认�
 
 插件里的薄 workflow 使用完整 commit SHA 固定 Guardian 引擎，旁边标注版本；DSH 更新不会改这行。V1 不检查 Guardian 自身更新，也不创建 Guardian 更新 PR。以后确实需要升级 Guardian 时，用户手工替换这一行 SHA 或重新运行安装即可。
 
+DSH 新版直接通过、无需修代码时，也会提交精确 verified lock 和简短报告，避免六小时后重复测试。默认是只改这两项的小 PR；开启 auto-merge 或 direct-push 后按对应模式自动落库，插件代码保持不变。
+
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

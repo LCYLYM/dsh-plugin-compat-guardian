@@ -31,6 +31,7 @@
 - R29 [open] 每个 attempt 锁定默认分支 base commit；publish 前分支 SHA 变化必须转为 `STALE_SOURCE` 并拒绝旧 PR 更新、auto-merge/direct-push，随后只先对新 SHA 做无模型复测。未调用模型时保留原自动维修机会，已调用时源码变化不得重置同版本预算或维修次数；surface: campaign state/publisher guard/lock；evidence: 等待、维修、验证和发布四个阶段的竞态测试。
 - R30 [open] 每个目标 DSH 版本使用独立维修 PR；旧 PR 未合并时 latest 变化，必须标记 `SUPERSEDED` 后自动关闭并保留历史，新目标从当前默认分支重新验证并在需要时新开 PR，禁止 force-push 或改写旧 PR 混合两个目标证据；surface: deterministic branch/PR publisher；evidence: PR 等待期间 latest 跳变的关闭、留痕和新 PR 回读。
 - R31 [open] onboarding workflow 必须以完整 commit SHA 引用 Guardian reusable workflow并注释发布版本，禁止 `main`/`v1` 等可移动 ref；V1 不实现 Guardian 自升级检测或更新 PR，DSH latest 变化不得改该 SHA；surface: installed thin workflow/non-goals；evidence: SHA 固定回读、tag/branch 拒绝和 DSH 更新时 workflow 零 diff。
+- R32 [open] candidate 无需修复即 PASS 时仍必须持久化精确 verified lock 和简短报告，按既有 pull-request/auto-merge/direct-push 模式交付且不得改插件代码；不得以临时 artifact 或 Issue-only 状态代替，否则无法可靠去重；surface: lock/report/publisher；evidence: 三种模式的无代码 PASS 提交与下一次轮询 NOOP。
 
 Current slice: R0 需求与架构设计
 

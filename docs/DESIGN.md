@@ -73,6 +73,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D31 | campaign 锁定启动时的默认分支 commit。发布前若分支已前进，旧 attempt 进入 `STALE_SOURCE` 且不得发布；下一次只先对新 commit 做无模型复测。此前未调用模型则保留唯一维修机会，已经调用则必须 reset 才能再次调模型。 |
 | D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
 | D33 | 插件 workflow 用完整 commit SHA 引用 Guardian reusable workflow，并注释人类可读版本；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA；以后确需升级时由用户手工改一行或重跑安装。 |
+| D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock 与简短报告，避免下次重复测试；交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码，也不增加 Issue-only 状态源。 |
 
 ## 4. 最小架构
 
@@ -410,7 +411,7 @@ cost = cache_hit_input * hit_rate
 | `auto-merge` | 否 | PR 的 required checks 通过后请求 GitHub 自动合并。 |
 | `direct-push` | 否 | verifier PASS 后直接更新默认分支；branch protection 拒绝则 BLOCKED。 |
 
-无代码改动仍更新 lock 和窄报告，提交“已验证支持目标版本”。有修复时，代码、必要测试、lock 和报告进入同一次交付。
+无代码改动仍更新 lock 和窄报告，提交“已验证支持目标版本”，这样下一次轮询能从 Git 历史和 lock 去重。默认创建只含这两项的小 PR；开启 auto-merge 时自动合并，开启 direct-push 时直接提交。三种方式都不改插件代码，也不另造 Issue-only 状态源。有修复时，代码、必要测试、lock 和报告进入同一次交付。
 
 失败只创建或更新一个按 campaign key 去重的 Issue/草稿报告，包含最小复现、失败 gate、尝试、预算、当前 diff 和人工接手点，不制造“已兼容”提交。
 
@@ -468,4 +469,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定 DSH 兼容测试直接 PASS、没有代码修复时，是否仍按交付模式提交 verified lock 记录。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定 token、人民币、墙钟和维修轮次的默认预算数字。其余已经确认的决定不因后续讨论自动重开。

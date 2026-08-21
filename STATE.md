@@ -31,6 +31,7 @@ Project stage: technical
 - 已确认 campaign 锁定启动时的默认分支 commit；发布前分支变化就将旧 attempt 标为 `STALE_SOURCE` 并禁止发布，下一次只先对新 commit 无模型复测。此前未调用模型则保留那一次维修机会，已经调用则源码变化不重置预算，仍需 reset 才能再次调模型。
 - 已确认一目标版本一维修 PR；PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 后自动关闭并保留历史，新目标从当前默认分支重新验证、必要时另开 PR，不 force-push 或复用旧 PR。
 - 已确认插件薄 workflow 用完整 commit SHA 固定 Guardian 引擎并注释版本，不使用可移动 main/v1；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA，未来确需升级时由用户手工改一行或重跑安装。
+- 已确认 candidate 直接 PASS、无需修代码时仍提交 verified lock 和简短报告，以便下次可靠去重；默认小 PR，auto-merge/direct-push 开启时按对应模式交付，不改插件代码，也不增加另一套状态存储。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 
