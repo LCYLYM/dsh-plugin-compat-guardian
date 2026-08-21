@@ -140,7 +140,20 @@ DeepSeek 当前官方文档明确：
 - [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 - [Choosing the runner for a job](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)
 
-## 8. 证据强度边界
+## 8. 首个真实样本仓库
+
+已建立公开独立仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)：
+
+- 源自公开正式仓库 `LCYLYM/dsh-attachments@028dc1f8dc9c7f963e714013b36adc4f48d88c2a`，保留完整历史，但不是 GitHub fork；
+- fixture 当前 `main@17edf22f50760f511533e9c78a989ad61e7f99ea`，本地与远端 SHA 一致；
+- Node `v24.13.1` 下 `npm test` 为 10/10 PASS；
+- `npm pack --dry-run --json` PASS，仍能生成真实插件 tarball；
+- 包名和插件代码未改，仓库元数据指向 fixture，`private: true` 只阻止误发 NPM；
+- 中英文 README 均明确它是 Guardian 自动兼容维修的公开测试副本。
+
+这只证明样本复制、原有测试和远端发布完成；Guardian onboarding、真实 candidate DSH、视觉模型、预算与自动修复仍未运行。
+
+## 9. 证据强度边界
 
 当前已证明的是设计输入和发布制品静态事实；尚未用真实 API key 执行：
 

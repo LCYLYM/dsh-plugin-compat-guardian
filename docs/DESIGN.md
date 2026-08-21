@@ -395,7 +395,9 @@ V1 不做：
 
 ### M0：Onboarding 与真实 gate
 
-选一个现有 Web 插件，生成 onboarding PR；用固定 candidate 打通 fresh `DSH_HOME`、pack/add/dump/start/专属断言/remove/report，不调用维修模型。
+首个样本已确定为公开独立仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)。它从正式仓库 `LCYLYM/dsh-attachments@028dc1f` 全新复制，保留真实 Web client、Host patch、安装器与 10 项测试，但设为 `private: true` 防止误发 NPM，并明确标为自动维修测试副本。
+
+M0 在该仓库生成 onboarding PR，用固定 candidate 打通 fresh `DSH_HOME`、pack/add/dump/start/插件专属断言/remove/report，先不调用维修模型。
 
 ### M1：latest 收敛与状态
 
@@ -411,4 +413,4 @@ V1 不做：
 
 ## 19. 待继续 grill
 
-下一项是确定首个真实插件样本。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定 M0 首次安装时是否先只跑兼容测试，还是立即接入模型维修。其余已经确认的决定不因后续讨论自动重开。
