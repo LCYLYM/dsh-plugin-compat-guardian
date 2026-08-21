@@ -1,6 +1,6 @@
 # State
 
-Current slice: R0 需求讨论与设计基线 Draft 0.3
+Current slice: R0 grilling 与设计基线 Draft 0.3
 
 Project stage: technical
 
@@ -17,7 +17,8 @@ Project stage: technical
 - 已确认 V1 只统计 DSH/DeepSeek 暴露的 token usage，并按默认官方价格映射估算；搜索缺少 usage 时只记调用次数，不做复杂预留，OpenAI-compatible 账单解析不进 V1。provider、base URL、key 环境引用和 model id 均可配置。
 - 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；Actions 仍会运行，但这一步不调用 repair model、不消耗模型 token，也不新建预算。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加配置项。
 - 已从公开正式仓库 `LCYLYM/dsh-attachments@028dc1f` 全新复制并创建独立 public fixture：`LCYLYM/dsh-attachments-guardian-fixture`。fixture `main@17edf22` 与远端一致、不是 GitHub fork、保留完整源历史，10/10 测试和 `npm pack --dry-run` 通过；README 已标明测试用途，`private: true` 防止误发 NPM。
+- 已确认 M0 分两步：先在没有模型 key 的情况下证明监控、真实兼容测试、报告和去重；再在隔离测试分支恢复历史 `httpServer` 旧错误，验证模型维修和 PR。两个阶段都不开 auto-merge/direct-push。
 
-当前阻塞：无。未决产品细节仅保留在 `docs/DESIGN.md` 的“待继续 grill”小节，不得用旧问题覆盖已确认决策。
+当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 
-下一步：确定 M0 是否先只安装并运行无模型兼容测试；用户发出 Guardian 实现信号后，在该 fixture 打通 onboarding 窄闭环。
+下一步：继续一次一问完成剩余设计。只有用户明确宣布 grilling 结束并要求开工后，才制定并执行实现计划。

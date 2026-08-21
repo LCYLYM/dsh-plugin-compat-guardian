@@ -58,6 +58,8 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D16 | `gh-aw` 只作知识参考，V1 没有它的运行时依赖；provider 协议直接复用 DSH 原生实现。 |
 | D17 | V1 只累计 DSH/DeepSeek 暴露的 token usage，并用默认官方价格表估算；不单独实现 OpenAI-compatible 账单解析器。 |
 | D18 | 根 DSH 版本号没变但实际安装内容变了，就重新执行完整兼容测试；此时 Actions 会运行，但暂不调用 repair model、不消耗模型 token，也不增加用户配置或预算。 |
+| D19 | M0 先在没有模型 key 的情况下验证监控与完整兼容测试；通过后才在隔离测试分支恢复历史 `httpServer` 错误，验证模型维修和 PR。两个阶段均不开自动合并或直接推送。 |
+| D20 | 当前处于 grilling 阶段；用户明确宣布 grilling 结束并要求开工前，只允许调研和文档，不实施 workflow、故障场景、secrets 或模型调用。 |
 
 ## 4. 最小架构
 
@@ -399,6 +401,13 @@ V1 不做：
 
 M0 在该仓库生成 onboarding PR，用固定 candidate 打通 fresh `DSH_HOME`、pack/add/dump/start/插件专属断言/remove/report，先不调用维修模型。
 
+M0 分成两个清楚的验收阶段：
+
+1. **先证明“会检查”**：不配置模型 API key，只运行版本探测、仓库测试、插件打包安装、`dump-config`、真实 `dsh web` 启动、插件专属 smoke、清理、报告、lock 更新和重复触发去重。任何失败只报告，不修代码。
+2. **再证明“会维修”**：第一阶段稳定后，在隔离测试分支把已经发生过的 `WebServer` 契约改回错误的 `httpServer`，形成可解释、可复现的真实兼容故障；这时才配置 repair model。机器人必须复现失败、恢复正确接口、重新跑完第一阶段全部检查，并创建修复 PR。
+
+两个阶段都使用 `pull-request` 模式，关闭 `auto-merge` 和 `direct-push`。第二阶段的故障分支、secret 与模型调用目前都只在设计中，grilling 结束前不得创建或执行。
+
 ### M1：latest 收敛与状态
 
 加入 registry resolver、真实安装图快照、event/budget key、lock、concurrency、`SUPERSEDED` 和低价等待状态。
@@ -413,4 +422,4 @@ M0 在该仓库生成 onboarding PR，用固定 candidate 打通 fresh `DSH_HOME
 
 ## 19. 待继续 grill
 
-下一项是确定 M0 首次安装时是否先只跑兼容测试，还是立即接入模型维修。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定一次 campaign 到底允许 repair DSH 修改哪些文件，以及依赖升级、生成文件和测试修改分别如何处理。其余已经确认的决定不因后续讨论自动重开。

@@ -6,6 +6,7 @@ This repository owns the DSH plugin compatibility orchestrator, reusable GitHub 
 
 ## Non-negotiable boundaries
 
+- The project is currently in a user-declared grilling/design phase. Until the user explicitly ends grilling and authorizes implementation, limit work to read-only research and documentation; do not install workflows, create fault branches, configure secrets, call repair models, or mutate the public fixture.
 - Keep the watched candidate DSH runtime separate from the pinned repair runner.
 - Treat `0.1.1-rc.1`, `deepseek-v4-flash-vision-exp`, and the bundled DeepSeek tariff windows as overridable defaults, not engine constants. Resolve and pin the effective DSH version, provider, model, price revision, and package graph for each campaign.
 - A changed dependency snapshot under the same root DSH version automatically reruns repository tests, pack/install, dump-config, real DSH startup, and plugin smoke assertions without invoking the repair model. This still consumes CI runtime, but not model tokens and not a new budget bucket. If that version already consumed its one automatic repair, require the existing reset control before another model repair. Do not add a user-facing knob for this behavior.
