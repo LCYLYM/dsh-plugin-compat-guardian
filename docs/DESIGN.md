@@ -43,7 +43,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D1 | V1 是仓库内 GitHub Actions 维修机器人，不建设中央服务、数据库或 GitHub App。 |
 | D2 | 只追踪 NPM `latest` 并最终收敛到最新；不为每个中间发布排队。 |
 | D3 | candidate 与 repair runner 是两个隔离角色；candidate 无模型长期密钥和 Git 写权限。 |
-| D4 | repair DSH 默认 `0.1.1-rc.1`，允许配置为其他固定版、`latest` 或 `target`；每轮开始时解析成精确制品并冻结。 |
+| D4 | repair DSH 默认 `0.1.1-rc.2`（项目立项时 NPM `latest`），允许配置为其他固定版、`latest` 或 `target`；每轮开始时解析成精确制品并冻结。 |
 | D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`；provider id、base URL、key 环境引用和 model id 均可覆盖，失败不得静默换 route。 |
 | D6 | 视觉由所选模型的图片输入能力提供；DeepSeek 联网搜索是 DSH 的独立 search provider 调用，不把两者混称为一个能力。 |
 | D7 | onboarding 由 DSH 自动发现 smoke surface，用户可给自然语言 hints；用户只需审核首次 onboarding PR，contract 变化另开 PR。 |
@@ -69,6 +69,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D27 | repair model secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign，并且只在无 key 兼容检查确认失败后注入 repair job；PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 不得获得它。 |
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
 | D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置/lock 变更触发；普通源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
+| D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
 
 ## 4. 最小架构
 
@@ -105,13 +106,13 @@ registry + package + dist-tag + root version + root integrity
 
 ### 为什么版本号没变也可能需要复测
 
-DSH 是由很多内部 NPM 包组成的。根包可能一直显示 `0.1.1-rc.1`，但其中一个内部包允许自动安装更新的小版本，所以两天后的全新 `npx` 实际拿到的内容可能已经不同。
+DSH 是由很多内部 NPM 包组成的。根包版本可能一直不变，但其中一个内部包允许自动安装同一兼容范围内的新制品，所以两天后的全新 `npx` 实际拿到的内容可能已经不同。
 
 例如：
 
 ```text
-周一：@deepseek-ai/dsh 0.1.1-rc.1 + 内部 LLM 包 rc.1
-周三：@deepseek-ai/dsh 0.1.1-rc.1 + 内部 LLM 包 rc.2
+第一次：根 DSH 版本 X + 内部 LLM 制品 A
+后来：  根 DSH 版本 X + 内部 LLM 制品 B
 ```
 
 对用户来说 DSH 版本号没变，但插件面对的代码变了。这里既不是“永远固定旧依赖”，也不是“测试过程中随时升级依赖”：
@@ -193,6 +194,12 @@ DSH 默认从 `package.json`/manifest、源码入口、README、已有 test/buil
 
 插件新增入口或主要能力时才需要再次审核 contract PR，不要求每个 DSH 新版本都人工重审同一合同。
 
+onboarding PR 合并后，lock 里还没有历史 `verified`。这时不增加一个新的 baseline 配置项，而是先把本轮已解析并冻结的 repair DSH 当作启动参照（默认 `0.1.1-rc.2`），在当前插件树上执行同一套完整 gate：
+
+1. repair DSH 参照通过，才由 publisher 把它写成第一份精确 `verified`，随后继续测试当时 NPM `latest`；若两者是同一精确安装快照，不重复执行第二遍。
+2. repair DSH 参照失败，状态为 `ONBOARDING_BLOCKED`，只报告失败证据，不调用模型。因为此时没有“旧版通过、新版失败”的差分，不能把仓库原本就坏的问题冒充 DSH 更新兼容问题。
+3. 用户若把 repair DSH 配成 `latest` 或 `target`，仍先解析为精确 version/integrity/install graph 后再作为这一次启动参照；后续历史基线读取 lock 中已验证的精确快照，不重新漂移解析。
+
 ## 8. 差分兼容验证
 
 每次完整验证使用同一个插件树和同一套 contract，只改变 DSH：
@@ -212,7 +219,7 @@ DSH 默认从 `package.json`/manifest、源码入口、README、已有 test/buil
 | G4 插件行为 | 至少一个插件专属 CLI/API/浏览器断言，不只检查首页 200。 |
 | G5 视觉（适用时） | 给当前解析模型传入真实图片或截图，消费结果；不能用文字替代图片。 |
 | G6 清理与幂等 | 端口释放、进程回收、重复安装/卸载不污染下一轮。 |
-| G7 交付安全 | diff allowlist、secret scan、contract digest 和报告 schema 均通过。 |
+| G7 交付安全 | 保护路径 denylist、secret scan、contract digest 和报告 schema 均通过。 |
 
 PASS 只对报告中的精确 tuple 成立：
 
@@ -250,7 +257,7 @@ $RUNNER_TEMP/dsh-compat/<event-key>/<attempt>/
 默认配置为：
 
 ```text
-repair DSH: 0.1.1-rc.1
+repair DSH: 0.1.1-rc.2
 provider:   deepseek-official
 model:      deepseek-v4-flash-vision-exp
 ```
@@ -448,4 +455,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定首次 onboarding 没有历史 `verified` 时，如何建立第一份已知兼容基线。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定一个 DSH campaign 运行期间默认分支出现新提交时，旧维修应如何停止和重新验证。其余已经确认的决定不因后续讨论自动重开。

@@ -27,23 +27,24 @@ npm view @deepseek-ai/dsh dist-tags version time --json
 
 最新回读：
 
-- `latest` -> `0.1.1-rc.1`
-- `next` -> `0.1.1-rc.1`
+- `latest` -> `0.1.1-rc.2`
+- `next` -> `0.1.1-rc.2`
+- `0.1.1-rc.2` 发布时间 -> `2026-08-21T12:42:19.422Z`
 - `0.1.1-rc.1` 发布时间 -> `2026-08-21T06:49:18.639Z`
 
-同一天较早探测时，`latest` 仍是 `0.1.0-rc.7`，而 registry 已有未被 `latest` 指向的 `0.1.0-rc.8` 和 `next=0.1.1-rc.1`。这同时证明：
+同一天较早探测时，`latest` 仍是 `0.1.0-rc.7`，随后先变成 `0.1.1-rc.1`，又在项目设计期间变成 `0.1.1-rc.2`。这同时证明：
 
 1. 监控必须遵循 dist-tag，不能选“semver 最大版本”来冒充 `npx` 默认行为。
 2. latest 会在一次长维修中变化，所以旧任务必须 `SUPERSEDED` 并最终收敛到最新。
 
-根包 `@deepseek-ai/dsh@0.1.1-rc.1` 对大量内部包使用 `^0.1.1-rc.1` 范围，其中包括 `@deepseek-ai/dsh-llm-deepseek`。说人话就是：DSH 显示的版本号可能没变，但今天全新安装到的内部组件与前几天不同。同一次测试会用 package lock 固定依赖；以后的巡检则重新模拟今天的全新安装。实际安装内容变化时，会重跑仓库测试、插件 pack/install、dump-config、真实启动和 smoke 断言；这一步运行 Actions，但还不调用 repair model。已经用过自动维修时，测试失败后仍需用户 reset 才能再次花模型额度。
+根包 `@deepseek-ai/dsh@0.1.1-rc.2` 的 integrity 为 `sha512-UP1UIh6q3Gme/yXRn/QL2P8IsVlv8Shpg22TRJIZPsCRWLm4CBiA1MUvXmJAfsOEETBMLAl+xWPtFw6ICsN3wg==`，对大量内部包使用 `^0.1.1-rc.2` 范围。说人话就是：DSH 显示的根版本号可能没变，但今天全新安装到的内部组件与前几天不同。同一次测试会用 package lock 固定依赖；以后的巡检则重新模拟今天的全新安装。实际安装内容变化时，会重跑仓库测试、插件 pack/install、dump-config、真实启动和 smoke 断言；这一步运行 Actions，但还不调用 repair model。已经用过自动维修时，测试失败后仍需用户 reset 才能再次花模型额度。
 
 ## 3. 视觉模型在当前发布制品中真实存在
 
-本轮同时检查了官方仓库当前提交 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` 和 NPM tarball：
+本轮同时检查了官方仓库提交 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` 和最新 NPM tarball：
 
 ```bash
-npm pack @deepseek-ai/dsh-llm-deepseek@0.1.1-rc.1
+npm pack @deepseek-ai/dsh-llm-deepseek@0.1.1-rc.2
 tar -xOf <archive> package/lib/index.js
 ```
 
@@ -55,13 +56,14 @@ name: DeepSeek-V4-Flash-Vision-Exp
 inputModalities: [text, image]
 ```
 
-所以 `0.1.1-rc.1` + 该模型支持视觉不是只根据 `master` 猜测；当前已发布子包中就有对应适配器。官方 DSH 源码还记录图片压缩、Files API 上传、内联回退、持久附件、上限与错误处理。
+所以 `0.1.1-rc.2` + 该模型支持视觉不是只根据 `master` 猜测；当前已发布子包中就有对应适配器。该子包 integrity 为 `sha512-GH9AukC2kozv6Q8/9DDhACHSe7fpTG7o0iWGUEN/m7/qajCJ8abySOFi3N7otdVmolR6Mvz2GZDTn2HdHqkWWg==`。官方 DSH 源码还记录图片压缩、Files API 上传、内联回退、持久附件、上限与错误处理。
 
 官方来源：
 
 - [DSH DeepSeek adapter 固定提交源码](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/llm/llm-deepseek/src/index.ts)
 - [DSH DeepSeek adapter 中文说明](https://github.com/deepseek-ai/deepseek-harness/blob/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e/packages/llm/llm-deepseek/README.zh.md)
-- [NPM `@deepseek-ai/dsh` 0.1.1-rc.1](https://www.npmjs.com/package/@deepseek-ai/dsh/v/0.1.1-rc.1)
+- [NPM `@deepseek-ai/dsh` 0.1.1-rc.2](https://www.npmjs.com/package/@deepseek-ai/dsh/v/0.1.1-rc.2)
+- [NPM `@deepseek-ai/dsh-llm-deepseek` 0.1.1-rc.2](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek/v/0.1.1-rc.2)
 
 ## 4. DeepSeek 官方视觉与价格契约
 
@@ -157,7 +159,7 @@ DeepSeek 当前官方文档明确：
 
 当前已证明的是设计输入和发布制品静态事实；尚未用真实 API key 执行：
 
-- `0.1.1-rc.1` 中视觉模型的端到端图片请求；
+- `0.1.1-rc.2` 中视觉模型的端到端图片请求；
 - 将 DeepSeek search provider 的 model 覆盖为视觉模型后的 native search；
 - Guardian 自身的预算、调度、修复和 GitHub 发布流程。
 

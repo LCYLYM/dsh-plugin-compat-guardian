@@ -8,11 +8,11 @@ Project stage: technical
 
 - 已建立独立 Git 仓库、`main` 基线与 `codex/design-foundation` worktree。
 - 已刷新并回读参考项目的 33 份同目录 Codex 记录；原始记录位于被 Git 忽略的本地目录。
-- 已核对 2026-08-21 的 NPM dist-tag；调研期间 `latest` 从 `0.1.0-rc.7` 变为 `0.1.1-rc.1`，证明必须采用 latest-convergence 而非逐发布排队。
-- 已直接检查官方仓库当前提交与 NPM 发布包：`@deepseek-ai/dsh-llm-deepseek@0.1.1-rc.1` 已包含 `deepseek-v4-flash-vision-exp`，并声明 `inputModalities: [text, image]`；不是只存在于未发布源码。
+- 已核对 2026-08-21 的 NPM dist-tag；调研期间 `latest` 从 `0.1.0-rc.7` 先变为 `0.1.1-rc.1`、再变为 `0.1.1-rc.2`，证明必须采用 latest-convergence 而非逐发布排队。最新回读中 `latest=next=0.1.1-rc.2`。
+- 已直接检查官方仓库与 NPM 发布包：`@deepseek-ai/dsh-llm-deepseek@0.1.1-rc.2` 仍包含 `deepseek-v4-flash-vision-exp`，并声明 `inputModalities: [text, image]`；根 `@deepseek-ai/dsh@0.1.1-rc.2` 的完整 integrity 和内部依赖范围也已回读。
 - 已核对 DeepSeek 2026-08-21 官方价格页：该视觉模型与 V4 Flash 同档，空闲时段价格为高峰的一半；高峰为北京时间 `09:00–12:00`、`14:00–18:00`。这些值只作为可覆盖且带 revision 的默认快照。
 - 已确认 V1 是安装进单个插件仓库的自动维修机器人；中央托管、upstream 同步、`gh-aw` 依赖与 provider 重实现均不进 V1。
-- 已确认 repair DSH 默认 `0.1.1-rc.1`、repair model 默认 `deepseek-v4-flash-vision-exp`，二者和价格窗口均可覆盖，但每个 campaign 必须冻结实际解析值；同时已锁定差分兼容契约、三种交付模式、campaign 级预算、单次自动维修和 `N -> Y` 人工恢复语义。
+- 已确认 repair DSH 默认 `0.1.1-rc.2`（项目立项时 NPM latest）、repair model 默认 `deepseek-v4-flash-vision-exp`，二者和价格窗口均可覆盖，但每个 campaign 必须冻结实际解析值；同时已锁定差分兼容契约、三种交付模式、campaign 级预算、单次自动维修和 `N -> Y` 人工恢复语义。
 - 已确认视觉由 repair model 提供；官方联网搜索由 DSH 独立 search provider 发起另一笔模型请求，不能混写为同一能力。
 - 已确认 V1 只统计 DSH/DeepSeek 暴露的 token usage，并按默认官方价格映射估算；搜索缺少 usage 时只记调用次数，不做复杂预留，OpenAI-compatible 账单解析不进 V1。provider、base URL、key 环境引用和 model id 均可配置。
 - 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；Actions 仍会运行，但这一步不调用 repair model、不消耗模型 token，也不新建预算。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加配置项。
@@ -27,6 +27,7 @@ Project stage: technical
 - 已确认 repair model secret 只在可信默认分支 SHA 的定时、手工或默认分支 push campaign 中使用，并且必须等无 key 检查确认不兼容后才注入；普通/fork PR、检出 PR 的 pull_request_target 和任意 ref 均不可获得。repair 与 publisher Git 写权限继续隔离。
 - 已再次收紧产品范围：只维护 DSH 更新造成的插件兼容性。无关依赖升级、普通 CI 修复、代码质量整理和通用仓库维护不进入自动维修；其他能力只有确实支撑探测、验证、修复、交付和报告时才加入。
 - 已确认默认每 6 小时检查一次 NPM latest 和实际安装图，支持手工立即检查，并在默认分支 Guardian 配置/lock 变化时触发；普通源码 push 不触发。cron 只负责唤醒，延迟或跨过中间版本时直接收敛到当时 latest。
+- 已确认 onboarding 没有历史 verified 时，直接用本轮解析并冻结的 repair DSH（默认 rc.2）跑完整 gate 建立第一份基线；通过后才测试当前 latest，失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

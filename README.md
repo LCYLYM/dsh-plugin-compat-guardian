@@ -12,7 +12,7 @@ V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目�
 - [长期验收合同](ACCEPTANCE.md)
 - [当前切片状态](STATE.md)
 
-repair DSH 默认使用 `0.1.1-rc.1`，provider/model 默认使用 `deepseek-official/deepseek-v4-flash-vision-exp`；DSH 版本、provider、base URL、key 的环境变量引用和 model ID 均可由仓库覆盖，但一次 campaign 开始后必须锁定实际值与制品完整性，不能中途漂移或静默回退。候选 DSH 跟随当前 `latest` 并最终收敛到最新制品。
+repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider/model 默认使用 `deepseek-official/deepseek-v4-flash-vision-exp`；DSH 版本、provider、base URL、key 的环境变量引用和 model ID 均可由仓库覆盖，但一次 campaign 开始后必须锁定实际值与制品完整性，不能中途漂移或静默回退。候选 DSH 仍跟随运行时的当前 `latest` 并最终收敛到最新制品。
 
 有时 NPM 上显示的 DSH 版本号没变，但它依赖的内部组件已经更新。同一次测试或维修会锁定整套依赖，保证前后使用同一套代码；以后的定时巡检则重新模拟“用户今天全新运行 `npx` 会装到什么”。如果实际安装内容变了，Guardian 会重新执行仓库测试、插件打包安装、`dump-config`、真实 `dsh web` 启动和插件专属 smoke 断言。这时 GitHub Actions 仍在正常运行，只是还不调用 repair DSH 的模型、不消耗模型 token。测试失败后才进入维修；如果这个根版本已经用过一次自动维修，就提示用户把 `resetBudget` 从 `N` 改成 `Y` 后继续。
 
@@ -37,5 +37,7 @@ repair model 的 key 只会在可信默认分支上的定时、手工或默认�
 本项目只修“DSH 更新后插件不兼容”这一件事。它不是通用依赖升级机器人、CI 修复机器人或代码整理机器人；测试、预算、通知和交付功能都必须直接服务于发现、证明、修好并交付 DSH 兼容修复。
 
 默认每 6 小时检查一次 NPM `latest` 和实际安装图，也支持手工立即检查；默认分支中的 Guardian 配置或 lock 变化会触发一次处理，普通源码 push 不会。GitHub cron 只是唤醒器，即使延迟或错过中间版本，醒来后也直接处理当时的最新版本。
+
+首次 onboarding 还没有历史兼容记录时，先用本轮锁定的 repair DSH（默认 rc.2）跑完整验收。通过后它才成为第一份 `verified`，然后继续检查当前 latest；如果它自己都失败，只报告 `ONBOARDING_BLOCKED`，不调用模型把仓库原有问题当成 DSH 更新问题，也不增加另一项 baseline 配置。
 
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

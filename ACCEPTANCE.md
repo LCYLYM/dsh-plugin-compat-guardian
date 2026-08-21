@@ -1,7 +1,7 @@
 # Acceptance
 
 - R1 [open] 追踪 `@deepseek-ai/dsh` 当前 `latest` dist-tag，解析精确 version/root integrity 与实际安装依赖图 digest，并最终收敛到最新候选；surface: CI 运行记录与版本状态；evidence: 真实 registry/全新安装探测、过时任务 `SUPERSEDED` 和去重测试。
-- R2 [open] repair runner 的仓库默认值为 DSH `0.1.1-rc.1`，允许显式覆盖，并把候选新版安装到隔离目录；`latest`/`target` 等动态配置也必须在 campaign 开始解析成不变的 version/integrity/依赖图；surface: 独立 DSH_HOME、工作目录和进程；evidence: 两个角色与制品隔离的真实运行记录。
+- R2 [open] repair runner 的仓库默认值为项目立项时 NPM latest DSH `0.1.1-rc.2`，允许显式覆盖，并把候选新版安装到隔离目录；`latest`/`target` 等动态配置也必须在 campaign 开始解析成不变的 version/integrity/依赖图；surface: 独立 DSH_HOME、工作目录和进程；evidence: 两个角色与制品隔离的真实运行记录。
 - R3 [open] 使用上一次已知兼容 DSH 作为参照组，再在候选 DSH 中安装真实打包的插件并执行同一套 gate；surface: build/test/pack/profile/CLI/Web/API/插件行为；evidence: 只变更 DSH 这一基线变量的差分结果。
 - R4 [open] 兼容通过时生成去敏报告并更新 `.dsh-compat.lock.json#verified`；无代码改动也要提交“已验证该 DSH 版本”的窄记录；surface: lock/commit/PR/Actions；evidence: diff、commit、CI、制品 integrity 与报告回读。
 - R5 [open] 兼容失败时由 repair DSH 在受限 worktree 中诊断和修复，并由无共享结论权的 verifier 重新执行原套验收；surface: 隔离 worktree/branch；evidence: 失败复现、修复 diff、未被弱化的回归结果。
@@ -27,6 +27,7 @@
 - R25 [open] repair model secret 只能在绑定可信默认分支 SHA 的 schedule、workflow_dispatch 或默认分支 push campaign 中，于无 key 兼容检查确认失败后注入 repair job；普通/fork PR、检出 PR 代码的 pull_request_target 和任意 ref 必须拿不到该 secret，publisher Git 写 token 继续与 repair 隔离；surface: workflow permissions/jobs/event guard；evidence: 三个允许触发和各类拒绝触发的 secret 可见性测试。
 - R26 [open] Guardian 只响应 DSH 新版本或同根版本安装图变化造成的插件兼容问题；不得把无关依赖升级、普通 CI 故障、代码质量整理或日常仓库维护纳入自动维修 campaign；surface: detector/failure classifier/report；evidence: DSH 差分故障进入维修、无关故障只报告且不调模型。
 - R27 [open] 默认以 `17 */6 * * *` 每 6 小时探测 NPM latest/安装图，支持 workflow_dispatch 立即检查，并在默认分支 Guardian 配置或 lock 变化时触发；普通源码 push 不触发，cron 延迟或跳过中间版本后仍收敛到唤醒时 latest；surface: thin workflow/resolver/event dedupe；evidence: 三类允许触发、源码 push 静默、延迟与 latest 跳变测试。
+- R28 [open] onboarding 无历史 verified 时，先用本轮锁定的 repair DSH（默认 `0.1.1-rc.2`）在当前插件树执行完整 gate；PASS 才写第一份精确 verified 并测试当前 latest，失败则 `ONBOARDING_BLOCKED`、不调模型且不声称是 DSH 更新问题；surface: onboarding bootstrap/lock/report；evidence: 初始 PASS、初始 FAIL、动态 repair 解析和 repair/latest 同快照去重测试。
 
 Current slice: R0 需求与架构设计
 
