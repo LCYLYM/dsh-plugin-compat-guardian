@@ -1,11 +1,20 @@
 # State
 
-Current slice: R0 grilling 决策收口与设计基线 Draft 0.4
+Current slice: M0 本地 PASS；M1 公开 GitHub Actions 边界（R1/R2/R4/R9/R10/R17/R18/R27/R28/R31/R32/R41/R44/R47/R48/R49/R50/R51）
 
 Project stage: technical
 
 最近证据：
 
+- Guardian M0 运行时已提交为 `8fb702d`；包含 12 项通过的确定性测试、完整 SHA workflow 检查、去敏、并发锁、无模型 verifier 和 onboarding 生成器。
+- 已完成本地 M0 真实闭环：fixture 隔离分支 `automation/dsh-compat/onboarding@cf77d6e` 对精确 `@deepseek-ai/dsh@0.1.1-rc.2` 完成 10/10 仓库测试、真实 pack、profile add、dump-config、真实 `dsh web`、插件 `/community-multimedia-webui-input/v1/health` 断言、remove 和清理 dump，状态 `PASS`。
+- 本次 candidate root integrity 为 `sha512-UP1UIh6q3Gme/yXRn/QL2P8IsVlv8Shpg22TRJIZPsCRWLm4CBiA1MUvXmJAfsOEETBMLAl+xWPtFw6ICsN3wg==`，实际 pnpm graph digest 为 `11cbc898fa8080f58da7dd75abe6f43f1bf6a159f258bd05ce82b20925c80826`，插件 tarball SHA-256 为 `8ae8c0fd48e042a02876123f648d5fafbaf03cbf1266a32d11863ef9fe62dd2d`。
+- verified lock 提交后，在干净工作树重跑同一 candidate 得到相同 snapshot key `509b98a0fe2f5e87e995413a79de206bb1ca746411b42c343fd7987d2cc5a65d` 和 `NOOP`；snapshot 使用排除机器 lock 的 tracked-tree digest，已证明 Guardian 自己的 lock commit 不会形成完整测试循环。
+- M0 报告已改为成功步骤只保存命令、退出码、耗时、stdout/stderr 字节数与 SHA-256；临时路径显示为 `<GUARDIAN_TEMP>`。对报告与 lock 的本机路径、Authorization 和 credential-like 值扫描为零命中。
+- 已通过精确 `0.1.1-rc.2` 的真实 DSH headless 进程验证 `deepseek-official/deepseek-v4-flash-vision-exp`：普通模型调用退出码 0、结果非空，最终 usage 事件为 input 10,676、output 104、cache-read 0、reasoning 92 tokens。
+- 已真实调用同一模型的 DSH native search：session 中出现一次 `web/deepseek-search-llm-request`、一次 `tool/call` 和一次 `tool/result`；请求 endpoint 为 `https://api.deepseek.com/anthropic/v1/messages`，model 为 `deepseek-v4-flash-vision-exp`，tool type 为 `web_search_20250305`。搜索 provider 未暴露独立 usage，符合既定“记调用次数、不伪造 token”边界。
+- 两次真实模型 probe 都只通过一次性进程环境注入 key；临时 DSH_HOME 中 credential-like 值扫描为零，随后删除会话临时目录。尚未执行真实图片输入、自动维修或 GitHub secret 配置。
+- 已实现 reusable workflow 与薄 workflow 生成：candidate/verifier job 只读，publisher job 才有 Git 写权限，所有外部 Actions 固定完整 SHA，默认 runner 单一 `ubuntu-24.04`；当前只完成本地 YAML/单元验证，尚未发布 Guardian 远端仓库或执行 GitHub run。
 - 已建立独立 Git 仓库、`main` 基线与 `codex/design-foundation` worktree。
 - 已刷新并回读参考项目的 33 份同目录 Codex 记录；原始记录位于被 Git 忽略的本地目录。
 - 已核对 2026-08-21 的 NPM dist-tag；调研期间 `latest` 从 `0.1.0-rc.7` 先变为 `0.1.1-rc.1`、再变为 `0.1.1-rc.2`，证明必须采用 latest-convergence 而非逐发布排队。最新回读中 `latest=next=0.1.1-rc.2`。
@@ -50,6 +59,6 @@ Project stage: technical
 - 已确认首次安装入口为 `npx dsh-plugin-compat-guardian onboard`：临时目录、新分支、有 `gh` 自动开 onboarding PR、无 `gh` 留分支与命令，不直接写默认分支或持久化本地凭据。
 - 已确认 publisher 默认使用 `GITHUB_TOKEN` 并接受 GitHub 要求人工批准 bot PR checks；真正无人值守 auto-merge 才可选 publisher-only 细粒度 token，V1 不强制额外 token 或 GitHub App。
 
-当前阶段门：D1–D53 与 R1–R51 已收口，但用户尚未明确结束 grilling。除调研与文档外，仍禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
+当前阶段门：用户已于 2026-08-21 明确结束 grilling，并授权白皮书、完整落地列表和 MVP 验证。M0 本地真实闭环已 PASS；用户随后提供可用于测试/实际运行的模型凭据，普通 DSH 与 native search 最小 probe 已 PASS，但 key 尚未写入仓库或 GitHub。M1 需要先发布 Guardian 引擎并跑公开 fixture Actions；M2 才创建历史接口故障并运行 repair。auto-merge/direct-push 继续关闭。
 
-下一步：等待用户明确说“结束 grilling，开始实现”，随后才制定并执行实现计划。
+下一步：获得公开创建 Guardian 远端仓库的明确授权后，推送当前分支，用完整 commit SHA 重新生成 fixture onboarding workflow并执行公开 Actions 与 PR。M1 无模型闭环通过后，再单独进入受控 `httpServer` 故障维修；模型 Secret 只在 M2 的可信默认分支 job 中配置。

@@ -163,14 +163,48 @@ DeepSeek 当前官方文档明确：
 - 包名和插件代码未改，仓库元数据指向 fixture，`private: true` 只阻止误发 NPM；
 - 中英文 README 均明确它是 Guardian 自动兼容维修的公开测试副本。
 
-这只证明样本复制、原有测试和远端发布完成；Guardian onboarding、真实 candidate DSH、视觉模型、预算与自动修复仍未运行。
+样本复制、原有测试和远端发布之外，本地隔离 onboarding/M0 也已运行，证据见下一节；公开 GitHub Actions 尚未运行。
 
-## 9. 证据强度边界
+## 9. 2026-08-21 M0 与真实 provider 运行证据
 
-当前已证明的是设计输入和发布制品静态事实；尚未用真实 API key 执行：
+本地 fixture 隔离分支 `automation/dsh-compat/onboarding@cf77d6e` 已得到下面的真实链路：
 
-- `0.1.1-rc.2` 中视觉模型的端到端图片请求；
-- 将 DeepSeek search provider 的 model 覆盖为视觉模型后的 native search；
-- Guardian 自身的预算、调度、修复和 GitHub 发布流程。
+```text
+@deepseek-ai/dsh@0.1.1-rc.2 exact registry metadata
+  -> fresh pnpm candidate installation
+  -> fixture 10/10 tests + npm pack
+  -> dsh plugin --profile web add <tarball>
+  -> dump-config contains dsh-multimedia-webui-input
+  -> real dsh web process
+  -> GET /community-multimedia-webui-input/v1/health = 200
+  -> plugin remove + clean dump
+  -> verified lock
+  -> lock commit 后 clean rerun = NOOP
+```
 
-这些都保留为 `ACCEPTANCE.md` 中的 open 项；不得因源码存在就提前宣称运行态 PASS。
+冻结值：
+
+- root integrity：`sha512-UP1UIh6q3Gme/yXRn/QL2P8IsVlv8Shpg22TRJIZPsCRWLm4CBiA1MUvXmJAfsOEETBMLAl+xWPtFw6ICsN3wg==`；
+- pnpm graph digest：`11cbc898fa8080f58da7dd75abe6f43f1bf6a159f258bd05ce82b20925c80826`；
+- plugin tarball SHA-256：`8ae8c0fd48e042a02876123f648d5fafbaf03cbf1266a32d11863ef9fe62dd2d`；
+- contract SHA-256：`b53dfdd5afbf0f2c491e34eb6cfd1a3d7fddae5841dda18e008c3b0f9769ad70`；
+- snapshot key：`509b98a0fe2f5e87e995413a79de206bb1ca746411b42c343fd7987d2cc5a65d`。
+
+该 PASS 的实际机器是本地 `darwin-arm64` / Node `24.13.1` / npm `11.8.0`，配置目标 runner 才是 `ubuntu-24.04`。所以它证明 orchestrator 和真实 DSH surface，不冒充 GitHub-hosted Ubuntu 已通过。
+
+用户提供凭据后，又用精确 `0.1.1-rc.2` 的 DSH headless profile 做了两个一次性 probe：
+
+1. `deepseek-official/deepseek-v4-flash-vision-exp` 普通调用退出码 0、结果非空；最终 usage 为 input 10,676、output 104、cache-read 0、reasoning 92。
+2. 同一模型被同时写入 `agent-default-model` 和 `web-search-deepseek` overlay；真实会话出现 `web/deepseek-search-llm-request`、`tool/call` 和 `tool/result`，请求 `https://api.deepseek.com/anthropic/v1/messages`，使用 `web_search_20250305` 并返回官方仓库来源。主 agent 两个最终 usage 事件分别为 `10690/95` 和 `419/42` input/output tokens，第二轮另有 10,752 cache-read；search provider 本身未暴露 usage。
+
+key 只进入一次性进程环境，没有写进命令、仓库、报告或配置；两个临时 DSH_HOME 的 credential-like 扫描均为零，检查后已删除。报告成功步骤也不保存完整 stdout，只保存 hash/字节数。这里仍未证明图片真实进入请求。
+
+## 10. 证据强度边界
+
+当前已证明发布制品、M0 本地真实兼容链路、普通模型 route 和 native search。尚未执行：
+
+- `0.1.1-rc.2` 中图片真实进入出站请求的端到端视觉断言；
+- 公开 fixture 的 `ubuntu-24.04` GitHub Actions run、publisher PR 和 durable report URL；
+- Guardian 的跨 run 预算、低价等待、reset、受控故障自动修复和三种交付模式。
+
+这些仍保留为 `ACCEPTANCE.md` 中的 open/partial 项；不得用本地 M0 或纯文本模型 probe 提前宣称图片 smoke、自动维修或 GitHub 发布 PASS。

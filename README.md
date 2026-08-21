@@ -2,11 +2,13 @@
 
 安装在 DeepSeek Harness（DSH）插件仓库中的 GitHub Actions 维修机器人：追踪 NPM `latest`，隔离验证插件，不兼容时用本轮已锁定的 repair DSH 自动修复，再由独立 verifier 复验并产出可合并 PR。
 
-当前阶段：grilling 决策已收口 / 设计基线 Draft 0.4。已建立公开真实样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)，但实现仍明确冻结；只有用户宣布 grilling 结束并要求开工后，才会安装 Guardian workflow、创建故障场景、配置模型凭据或运行自动维修。
+当前阶段：设计基线 Draft 0.4 已冻结，M0 已在本地真实样本上完成无模型兼容闭环。已建立公开真实样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)；公开 GitHub Actions 复现属于下一阶段 M1，自动维修属于 M2。当前没有把本地 macOS PASS 冒充为 GitHub-hosted Ubuntu PASS。
 
 V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目的 reusable workflow/orchestrator。无论仓库是原创插件还是魔改 fork，都只维护当前仓库，不自动同步或联系 upstream。
 
 - [方案与讨论稿](docs/DESIGN.md)
+- [白皮书](docs/WHITEPAPER.md)
+- [完整落地列表](docs/IMPLEMENTATION_PLAN.md)
 - [历史证据与当前契约](docs/REFERENCE_EVIDENCE.md)
 - [配置示例](.dsh-compat.example.yml)
 - [长期验收合同](ACCEPTANCE.md)

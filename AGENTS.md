@@ -6,7 +6,7 @@ This repository owns the DSH plugin compatibility orchestrator, reusable GitHub 
 
 ## Non-negotiable boundaries
 
-- The project is currently in a user-declared grilling/design phase. Until the user explicitly ends grilling and authorizes implementation, limit work to read-only research and documentation; do not install workflows, create fault branches, configure secrets, call repair models, or mutate the public fixture.
+- The user ended grilling on 2026-08-21 and authorized implementation plus MVP validation. M0 is limited to the no-model real compatibility loop; do not configure model secrets or create the repair fault scenario until M0 passes. Keep auto-merge and direct-push disabled in the public fixture during M0/M2 validation.
 - Keep the watched candidate DSH runtime separate from the pinned repair runner.
 - Treat `0.1.1-rc.2`, `deepseek-v4-flash-vision-exp`, and the bundled DeepSeek tariff windows as overridable defaults, not engine constants. Resolve and pin the effective DSH version, provider, model, price revision, and package graph for each campaign.
 - Resolve Node from `.node-version`, `.nvmrc`, then `package.json#engines`, falling back to Node 24 LTS; resolve the package manager from `packageManager`, then a unique lockfile, falling back to npm. Support npm/pnpm/yarn only in V1, block conflicts and Bun explicitly, and record exact resolved versions.
