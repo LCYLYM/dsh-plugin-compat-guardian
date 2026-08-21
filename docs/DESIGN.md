@@ -60,12 +60,14 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D18 | 根 DSH 版本号没变但实际安装内容变了，就重新执行完整兼容测试；此时 Actions 会运行，但暂不调用 repair model、不消耗模型 token，也不增加用户配置或预算。 |
 | D19 | M0 先在没有模型 key 的情况下验证监控与完整兼容测试；通过后才在隔离测试分支恢复历史 `httpServer` 错误，验证模型维修和 PR。两个阶段均不开自动合并或直接推送。 |
 | D20 | 当前处于 grilling 阶段；用户明确宣布 grilling 结束并要求开工前，只允许调研和文档，不实施 workflow、故障场景、secrets 或模型调用。 |
-| D21 | repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret 和仓库外路径进入短禁止清单。 |
+| D21 | repair DSH 默认可修改当前仓库内普通插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret 和仓库外路径进入短禁止清单。 |
 | D22 | repair DSH 可以提案修改仓库测试，但只要 diff 触及测试文件、测试配置或测试命令，本次交付就强制为普通 PR；即使仓库开启 auto-merge/direct-push，也必须人工审核后才能落库。 |
 | D23 | 依赖改动必须与当前 DSH 兼容故障直接相关且保持最小；禁止全量升级、无关升级和更换包管理器。新增/删除依赖、跨 major 升级或改安装生命周期脚本时强制人工 PR；普通 DSH 相关版本范围与 lockfile 调整可在完整复验后使用所选交付模式。 |
 | D24 | 仓库有明确构建命令时以源码为权威，repair 后由 verifier 干净重建，已跟踪的 `lib/dist` 必须与重建结果一致；无法复现则失败。仓库没有构建命令且 `lib` 本身被维护时，把它当普通源码。 |
 | D25 | repair DSH 可新增、修改和删除普通仓库文件；不为文件创建、重命名或删除另设复杂分级。不能删除的内容直接复用 D21 的保护清单，其他误删由原始 pack/install/contract/verifier 自然判失败。 |
 | D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
+| D27 | repair model secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign，并且只在无 key 兼容检查确认失败后注入 repair job；PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 不得获得它。 |
+| D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
 
 ## 4. 最小架构
 
@@ -236,6 +238,8 @@ $RUNNER_TEMP/dsh-compat/<event-key>/<attempt>/
 
 - candidate 不获得 `DEEPSEEK_API_KEY`、Git 写 token、`.git` 或 Docker socket。
 - repair DSH 只获得 DSH 原生 provider/settings/credentials 所需的模型凭据和受限 worktree。
+- repair campaign 只能绑定可信默认分支 SHA，并由该 SHA 上的 `schedule`、`workflow_dispatch` 或默认分支 `push` 触发；普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和用户传入的任意 ref 都不能注入 repair model secret。
+- 先在无 key job 完成版本探测和兼容失败确认，确实需要修代码时才向 repair job 注入模型凭据。repair DSH 会运行仓库命令，同一 job 内的可信仓库代码理论上可能接触该凭据，因此这里明确沿用“默认分支即仓库信任边界”，不声称同 job 内完全隔绝。
 - publisher 在 verifier PASS 后单独获得最小 GitHub 写权限；repair 进程永远接触不到它。
 - checkout 使用 `persist-credentials: false`；报告和 artifacts 在写入前脱敏。
 - 必须经过 candidate 真实模型 turn 才能验收的插件，默认需要单次低额度凭据；不能签发时标记 BLOCKED，不把长期 key 交给 candidate。
@@ -432,7 +436,7 @@ M0 分成两个清楚的验收阶段：
 
 ### M2：受控维修
 
-接入默认 repair DSH/模型、图片证据、失败包、diff allowlist、独立 verifier、两轮上限和冻结/reset。
+接入默认 repair DSH/模型、图片证据、失败包、保护路径 denylist、独立 verifier、两轮上限和冻结/reset。
 
 ### M3：预算、搜索与交付
 
@@ -440,4 +444,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定 repair model secret 只允许在哪些可信触发来源中使用，避免不受信任的 PR 代码读取仓库凭据。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定默认多久检查一次 NPM `latest`，以及是否只保留定时与手工两种核心触发。其余已经确认的决定不因后续讨论自动重开。

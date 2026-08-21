@@ -18,12 +18,14 @@ Project stage: technical
 - 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；Actions 仍会运行，但这一步不调用 repair model、不消耗模型 token，也不新建预算。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加配置项。
 - 已从公开正式仓库 `LCYLYM/dsh-attachments@028dc1f` 全新复制并创建独立 public fixture：`LCYLYM/dsh-attachments-guardian-fixture`。fixture `main@17edf22` 与远端一致、不是 GitHub fork、保留完整源历史，10/10 测试和 `npm pack --dry-run` 通过；README 已标明测试用途，`private: true` 防止误发 NPM。
 - 已确认 M0 分两步：先在没有模型 key 的情况下证明监控、真实兼容测试、报告和去重；再在隔离测试分支恢复历史 `httpServer` 旧错误，验证模型维修和 PR。两个阶段都不开 auto-merge/direct-push。
-- 已确认 repair DSH 默认可修改当前仓库内所有已跟踪的插件文件，包括源码、manifest、安装脚本、仓库测试和文档；不维护逐仓库长 allowlist。短禁止清单保护 workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径，最终 PASS 由这些不可修改的验收面决定。
+- 已确认 repair DSH 默认可修改当前仓库内普通插件文件，包括源码、manifest、安装脚本、仓库测试和文档；不维护逐仓库长 allowlist。短禁止清单保护 workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径，最终 PASS 由这些不可修改的验收面决定。
 - 已确认仓库测试可以随维修一起修改，但凡 diff 新增或修改测试文件、测试配置或测试命令，本次交付都强制降级为普通 PR；即使仓库开启 auto-merge/direct-push，也要人工审核该测试面变化。没有改测试面的维修仍遵循仓库所选交付模式。
 - 已确认依赖只做与当前 DSH 故障直接相关的最小调整：允许修改已有 DSH 相关版本范围并同步 lockfile；禁止全量/无关升级和切换包管理器；新增/删除依赖、跨 major 升级或修改安装生命周期脚本时强制人工 PR，其余通过完整复验后可遵循所选交付模式。
 - 已确认生成文件不按目录名猜测：有明确构建命令和对应源码时以源码为权威，verifier 必须在干净环境重建并要求已跟踪 `lib/dist` 逐字节一致，不可复现则失败；没有构建命令且 `lib` 是维护入口时把它当普通源码。可重复且一致的产物变化不额外强制人工 PR。
 - 已确认普通仓库文件可以新增、修改和删除，不再按重命名、可执行文件或根目录配置做复杂分级；已有保护清单中的控制面和验收面同样不可删除，其他误删交给原始 build/test/pack/install/contract/verifier 判失败，不维护第二份关键文件清单。
 - 已确认不设置改动文件数或增删行数的硬上限；报告只记录这些数据供人判断。防失控继续使用已有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier，不增加新配置。
+- 已确认 repair model secret 只在可信默认分支 SHA 的定时、手工或默认分支 push campaign 中使用，并且必须等无 key 检查确认不兼容后才注入；普通/fork PR、检出 PR 的 pull_request_target 和任意 ref 均不可获得。repair 与 publisher Git 写权限继续隔离。
+- 已再次收紧产品范围：只维护 DSH 更新造成的插件兼容性。无关依赖升级、普通 CI 修复、代码质量整理和通用仓库维护不进入自动维修；其他能力只有确实支撑探测、验证、修复、交付和报告时才加入。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

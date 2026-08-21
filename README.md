@@ -20,7 +20,7 @@ repair DSH 默认使用 `0.1.1-rc.1`，provider/model 默认使用 `deepseek-off
 
 默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，只有确实需要修代码时才等待低价时段调用模型。MVP 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；不单独实现 OpenAI-compatible 账单解析。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。交付默认为 PR，同时支持显式开启 `auto-merge` 或 `direct-push`。
 
-维修时默认允许改当前仓库内所有已跟踪的插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
+维修时默认允许改当前仓库内普通插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
 
 仓库测试也可以由机器人提案修改，但只要维修 diff 改了测试文件、测试配置或测试命令，本次就强制生成普通 PR，不能自动合并或直接推送，必须由人检查是否在“改答案”。没有修改测试面的维修仍按仓库选择的交付模式执行。
 
@@ -31,5 +31,9 @@ repair DSH 默认使用 `0.1.1-rc.1`，provider/model 默认使用 `deepseek-off
 普通仓库文件可以新增、修改和删除，不再针对重命名、可执行文件等情况设计额外分级。前述 workflow、Guardian、contract/verifier、凭据等保护内容同样不能删除；其他误删会由原有构建、测试、打包、安装和 smoke 验收拦住。
 
 报告会列出改动文件数和增删行数，但不会因为数字大就机械阻断；生成文件可能让这个数字失真。防死循环与失控仍由 token/金额/时间/轮次预算、每版本一次自动维修、保护路径和独立 verifier 负责，不增加新的行数配置。
+
+repair model 的 key 只会在可信默认分支上的定时、手工或默认分支 push campaign 中使用，而且先由无 key job 确认确实是 DSH 兼容失败，才进入带 key 的维修 job。普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和任意 ref 都拿不到 key；负责提交的 Git 写权限仍放在独立 publisher job。
+
+本项目只修“DSH 更新后插件不兼容”这一件事。它不是通用依赖升级机器人、CI 修复机器人或代码整理机器人；测试、预算、通知和交付功能都必须直接服务于发现、证明、修好并交付 DSH 兼容修复。
 
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。
