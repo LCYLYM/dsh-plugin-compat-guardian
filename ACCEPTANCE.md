@@ -23,6 +23,7 @@
 - R21 [open] 依赖修改只允许与当前 candidate DSH 故障有证据关联的最小变化；全量/无关升级和包管理器切换必须被拒绝，新增/删除依赖、跨 major 升级或安装生命周期脚本变化必须强制人工 PR，普通 DSH 相关版本范围和配套 lockfile 变化可在完整复验后遵循所选交付模式；surface: manifest/lockfile diff classifier/publisher；evidence: 允许、拒绝和强制降级三组端到端样例。
 - R22 [open] 仓库存在明确构建命令和对应源码时，repair 必须修改源码，verifier 从干净 worktree 使用冻结依赖重建，并要求所有已跟踪 `lib/dist` 产物逐字节一致；不可复现则失败。无构建命令且 `lib` 是维护入口时按普通源码处理；surface: repository classifier/build verifier；evidence: 可重复构建、脏产物、非确定构建和无构建入口四组样例。
 - R23 [open] repair DSH 可新增、修改和删除普通仓库文件，不引入独立的文件类型分级或第二份关键文件清单；D21 的保护路径同样不可删除，其余误删必须由原始 build/test/pack/install/contract/verifier 判失败；surface: repair diff/publisher/verifier；evidence: 普通增删正例、保护路径删除拒绝和关键插件文件误删失败样例。
+- R24 [open] 不设置 changed-files/changed-lines 阻断阈值；报告必须记录 diff 文件数和增删行数，防失控由既有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier 保证；surface: repair report/budget gates；evidence: 大型可重复生成 diff 不被误拦、超预算维修仍被既有硬门停止。
 
 Current slice: R0 需求与架构设计
 

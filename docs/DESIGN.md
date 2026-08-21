@@ -65,6 +65,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D23 | 依赖改动必须与当前 DSH 兼容故障直接相关且保持最小；禁止全量升级、无关升级和更换包管理器。新增/删除依赖、跨 major 升级或改安装生命周期脚本时强制人工 PR；普通 DSH 相关版本范围与 lockfile 调整可在完整复验后使用所选交付模式。 |
 | D24 | 仓库有明确构建命令时以源码为权威，repair 后由 verifier 干净重建，已跟踪的 `lib/dist` 必须与重建结果一致；无法复现则失败。仓库没有构建命令且 `lib` 本身被维护时，把它当普通源码。 |
 | D25 | repair DSH 可新增、修改和删除普通仓库文件；不为文件创建、重命名或删除另设复杂分级。不能删除的内容直接复用 D21 的保护清单，其他误删由原始 pack/install/contract/verifier 自然判失败。 |
+| D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
 
 ## 4. 最小架构
 
@@ -277,6 +278,8 @@ model:      deepseek-v4-flash-vision-exp
 
 文件增删保持简单：repair DSH 可以在仓库内新增、修改或删除普通文件，不单独区分重命名、可执行文件、隐藏文件或根目录文件。`.github/workflows/**`、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径本来就不可修改，因此也不可删除。普通关键文件若被误删，原始 build/test/pack/install/contract/verifier 必须自然失败，不再维护第二份“关键文件清单”。已经确认的测试面和依赖语义规则仍适用于新增或删除内容。
 
+不把 diff 大小变成另一套预算。报告固定记录改动文件数、新增行数和删除行数，但不设置 `maxChangedFiles` 或 `maxChangedLines`，因为生成产物和必要重构会让这些数字失真。运行失控由已有的模型 token/CNY、墙钟、维修轮次、每版本一次自动维修、保护路径和独立 verifier 机械限制。
+
 默认最多两轮。每轮结束后 agent 只能交付 diff；独立 verifier 从干净副本应用 diff 并重新执行原始合同。
 
 ## 12. Campaign 预算
@@ -437,4 +440,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定是否需要一个简单的 repair diff 体积上限，防止模型在一次兼容维修中改动过大。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定 repair model secret 只允许在哪些可信触发来源中使用，避免不受信任的 PR 代码读取仓库凭据。其余已经确认的决定不因后续讨论自动重开。
