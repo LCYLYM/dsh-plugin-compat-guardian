@@ -3,43 +3,19 @@ schema: 1
 watch:
   registry: https://registry.npmjs.org
   package: "@deepseek-ai/dsh"
-  channels:
-    - latest
-  schedule: "17 */6 * * *"
-
-runner:
-  # 必须换成该仓库单独验收过的稳定版本；禁止使用 latest。
-  dsh_version: CHANGE_ME_KNOWN_GOOD_VERSION
-  provider: deepseek-official
-  model: deepseek-v4-flash
-  base_url_secret: DSH_BASE_URL
-  api_key_secret: DSH_API_KEY
-
-plugin:
-  workspace: .
-  package_json: package.json
-  profile: web
-  install_from: npm-pack
-  surface: web
-
-security:
-  # disabled | ephemeral-proxy。默认禁止把 repair runner 的长期 key 传给 candidate。
-  candidate_model_access: disabled
-  candidate_base_url_secret: DSH_CANDIDATE_BASE_URL
-  candidate_ephemeral_key_secret: DSH_CANDIDATE_EPHEMERAL_KEY
-
-gates:
-  repository:
-    - npm test
-    - npm pack --dry-run
-  # 该命令必须消费 Guardian 注入的真实 DSH_VERSION/DSH_HOME/DSH_WEB_URL。
-  consumer:
-    - npm run test:compat:dsh
-  require_install_remove_roundtrip: true
-  require_dump_config: true
-  require_real_web_boot: true
+  channel: latest
+  # GitHub cron 只负责唤醒。每次唤醒后再判断版本和价格窗口，不能假设 cron 准点。
+  poll_cron: "17 * * * *"
 
 repair:
+  # 以下是产品默认值，仓库可覆盖；campaign 开始后会解析并锁定精确制品。
+  dsh_version: "0.1.1-rc.1"
+  provider: deepseek-official
+  model: deepseek-v4-flash-vision-exp
+  model_policy: pin-per-campaign
+  # 检测和确定性复测立即执行；只有模型维修等待低价窗口。
+  start_policy: low-price-window # immediate | low-price-window
+  allow_manual_price_override: true
   max_attempts: 2
   allowed_paths:
     - lib/**
@@ -53,27 +29,91 @@ repair:
   denied_paths:
     - .github/**
     - .dsh-compat.yml
+    - .dsh-compat.lock.json
     - compatibility/**
 
+  # 这是 DSH 的独立 DeepSeek 搜索 provider，不是视觉模型自带的能力。
+  # 默认同样使用视觉模型；若仓库覆盖，报告必须记录实际值，且不得静默回退。
+  search:
+    enabled: true
+    model: deepseek-v4-flash-vision-exp
+    max_calls: 3
+    max_uses_per_call: 3
+
+credentials:
+  # workflow 将同名 GitHub Actions secrets 映射到 DSH 原生环境变量。
+  api_key_env: DEEPSEEK_API_KEY
+  # 可选；留空时使用 DSH/provider 的默认端点。
+  base_url_env: DEEPSEEK_BASE_URL
+  # 搜索使用 Anthropic 兼容端点，不自动复用 DEEPSEEK_BASE_URL。
+  search_base_url_env: DEEPSEEK_SEARCH_BASE_URL
+
+plugin:
+  workspace: .
+  package_json: package.json
+  profile: web
+  install_from: npm-pack
+  surface: web
+
+smoke:
+  # onboarding 会从 manifest、源码、README 和现有测试生成机器断言。
+  contract: compatibility/dsh-smoke.yml
+  # 可选自然语言补充；留空时由 DSH 自行发现。
+  hints: ""
+
+security:
+  # disabled | ephemeral-proxy。默认不把 repair runner 的长期 key 传给 candidate。
+  candidate_model_access: disabled
+
+gates:
+  repository:
+    - npm test
+    - npm pack --dry-run
+  # 该命令必须消费 Guardian 注入的真实 DSH_VERSION/DSH_HOME/DSH_WEB_URL。
+  consumer:
+    - npm run test:compat:dsh
+  require_install_remove_roundtrip: true
+  require_dump_config: true
+  require_real_web_boot: true
+  require_plugin_assertion: true
+
 budget:
+  scope: repository-target-version
   max_tokens: 1000000
-  # 启用人民币上限前必须填写下面的精确 provider/model 价格。
   max_cny: 10
   max_wall_minutes: 60
   converge_remaining_ratio: 0.30
   converge_message_enabled: true
 
 pricing:
-  revision: CHANGE_ME_PRICE_REVISION
-  unit: cny_per_million_tokens
-  routes:
-    deepseek-official/deepseek-v4-flash:
-      input: CHANGE_ME
-      cache_read: CHANGE_ME
-      cache_write: CHANGE_ME
-      output: CHANGE_ME
+  # 这是可覆盖的官方默认快照；revision/source 会一并写入报告和 lock 证据。
+  revision: deepseek-public-2026-08-21
+  source: https://api-docs.deepseek.com/zh-cn/quick_start/pricing/
+  currency: CNY
+  unit: per_million_tokens
+  timezone: Asia/Shanghai
+  peak_windows:
+    - start: "09:00"
+      end: "12:00"
+    - start: "14:00"
+      end: "18:00"
+  rates:
+    peak:
+      input_cache_hit: 0.10
+      input_cache_miss: 3.00
+      output: 9.00
+    low_price:
+      input_cache_hit: 0.05
+      input_cache_miss: 1.50
+      output: 4.50
 
 delivery:
-  mode: pull-request
+  mode: pull-request # pull-request | auto-merge | direct-push
   branch_prefix: automation/dsh-compat
-  auto_merge: false
+
+notifications:
+  github_summary: true
+  github_issue_on_blocked: true
+  email: false
+  telegram: false
+  webhook: false
