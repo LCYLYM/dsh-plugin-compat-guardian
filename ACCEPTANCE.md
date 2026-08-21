@@ -26,6 +26,7 @@
 - R24 [open] 不设置 changed-files/changed-lines 阻断阈值；报告必须记录 diff 文件数和增删行数，防失控由既有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier 保证；surface: repair report/budget gates；evidence: 大型可重复生成 diff 不被误拦、超预算维修仍被既有硬门停止。
 - R25 [open] repair model secret 只能在绑定可信默认分支 SHA 的 schedule、workflow_dispatch 或默认分支 push campaign 中，于无 key 兼容检查确认失败后注入 repair job；普通/fork PR、检出 PR 代码的 pull_request_target 和任意 ref 必须拿不到该 secret，publisher Git 写 token 继续与 repair 隔离；surface: workflow permissions/jobs/event guard；evidence: 三个允许触发和各类拒绝触发的 secret 可见性测试。
 - R26 [open] Guardian 只响应 DSH 新版本或同根版本安装图变化造成的插件兼容问题；不得把无关依赖升级、普通 CI 故障、代码质量整理或日常仓库维护纳入自动维修 campaign；surface: detector/failure classifier/report；evidence: DSH 差分故障进入维修、无关故障只报告且不调模型。
+- R27 [open] 默认以 `17 */6 * * *` 每 6 小时探测 NPM latest/安装图，支持 workflow_dispatch 立即检查，并在默认分支 Guardian 配置或 lock 变化时触发；普通源码 push 不触发，cron 延迟或跳过中间版本后仍收敛到唤醒时 latest；surface: thin workflow/resolver/event dedupe；evidence: 三类允许触发、源码 push 静默、延迟与 latest 跳变测试。
 
 Current slice: R0 需求与架构设计
 

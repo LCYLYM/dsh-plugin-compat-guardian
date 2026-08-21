@@ -68,6 +68,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
 | D27 | repair model secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign，并且只在无 key 兼容检查确认失败后注入 repair job；PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 不得获得它。 |
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
+| D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置/lock 变更触发；普通源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
 
 ## 4. 最小架构
 
@@ -332,11 +333,14 @@ cost = cache_hit_input * hit_rate
 调度规则：
 
 1. registry 探测和不调用模型的确定性 gate 立即执行。
-2. 只有确认需要维修时，才判断当前是否在配置的低价窗口。
-3. 高峰时进入 `WAITING_FOR_PRICE`，不消耗模型预算。
-4. workflow 用周期 poll 唤醒并自行检查窗口；不能依赖 GitHub cron 在低价开始时准点运行。
-5. 等待期间若 `latest` 变化，旧目标 `SUPERSEDED`，直接合并到新目标。
-6. `workflow_dispatch` 可显式选择立即执行；报告必须标记这次价格窗口 override。
+2. onboarding 安装的薄 workflow 默认 cron 为 `17 */6 * * *`；它只唤醒 resolver，不保证准点，也不为错过的中间版本补跑。GitHub schedule 必须定义在 workflow 中，所以 `.dsh-compat.yml` 不重复提供一个无效的 `poll_cron`；用户若要改变周期，直接审核并修改该 workflow。
+3. 只有确认需要维修时，才判断当前是否在配置的低价窗口。
+4. 高峰时进入 `WAITING_FOR_PRICE`，不消耗模型预算。
+5. workflow 用周期 poll 唤醒并自行检查窗口；不能依赖 GitHub cron 在低价开始时准点运行。
+6. 等待期间若 `latest` 变化，旧目标 `SUPERSEDED`，直接合并到新目标。
+7. `workflow_dispatch` 可显式选择立即执行；报告必须标记这次价格窗口 override。
+
+除定时和手工检查外，只在默认分支的 Guardian 配置或 `.dsh-compat.lock.json` 变化时触发，用于采用新配置或消费 `resetBudget` 边沿。普通插件源码 push 不额外运行 Guardian；下一次六小时唤醒会基于最新默认分支 SHA 检查。
 
 ## 14. 最小 lock 与一次性 reset
 
@@ -444,4 +448,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定默认多久检查一次 NPM `latest`，以及是否只保留定时与手工两种核心触发。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定首次 onboarding 没有历史 `verified` 时，如何建立第一份已知兼容基线。其余已经确认的决定不因后续讨论自动重开。

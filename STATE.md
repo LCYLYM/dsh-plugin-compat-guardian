@@ -26,6 +26,7 @@ Project stage: technical
 - 已确认不设置改动文件数或增删行数的硬上限；报告只记录这些数据供人判断。防失控继续使用已有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier，不增加新配置。
 - 已确认 repair model secret 只在可信默认分支 SHA 的定时、手工或默认分支 push campaign 中使用，并且必须等无 key 检查确认不兼容后才注入；普通/fork PR、检出 PR 的 pull_request_target 和任意 ref 均不可获得。repair 与 publisher Git 写权限继续隔离。
 - 已再次收紧产品范围：只维护 DSH 更新造成的插件兼容性。无关依赖升级、普通 CI 修复、代码质量整理和通用仓库维护不进入自动维修；其他能力只有确实支撑探测、验证、修复、交付和报告时才加入。
+- 已确认默认每 6 小时检查一次 NPM latest 和实际安装图，支持手工立即检查，并在默认分支 Guardian 配置/lock 变化时触发；普通源码 push 不触发。cron 只负责唤醒，延迟或跨过中间版本时直接收敛到当时 latest。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 
