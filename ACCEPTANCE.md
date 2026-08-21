@@ -24,7 +24,7 @@
 - R22 [open] 仓库存在明确构建命令和对应源码时，repair 必须修改源码，verifier 从干净 worktree 使用冻结依赖重建，并要求所有已跟踪 `lib/dist` 产物逐字节一致；不可复现则失败。无构建命令且 `lib` 是维护入口时按普通源码处理；surface: repository classifier/build verifier；evidence: 可重复构建、脏产物、非确定构建和无构建入口四组样例。
 - R23 [open] repair DSH 可新增、修改和删除普通仓库文件，不引入独立的文件类型分级或第二份关键文件清单；D21 的保护路径同样不可删除，其余误删必须由原始 build/test/pack/install/contract/verifier 判失败；surface: repair diff/publisher/verifier；evidence: 普通增删正例、保护路径删除拒绝和关键插件文件误删失败样例。
 - R24 [open] 不设置 changed-files/changed-lines 阻断阈值；报告必须记录 diff 文件数和增删行数，防失控由既有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier 保证；surface: repair report/budget gates；evidence: 大型可重复生成 diff 不被误拦、超预算维修仍被既有硬门停止。
-- R25 [open] repair model secret 只能在绑定可信默认分支 SHA 的 schedule、workflow_dispatch 或默认分支 push campaign 中，于无 key 兼容检查确认失败后注入 repair job；普通/fork PR、检出 PR 代码的 pull_request_target 和任意 ref 必须拿不到该 secret，publisher Git 写 token 继续与 repair 隔离；surface: workflow permissions/jobs/event guard；evidence: 三个允许触发和各类拒绝触发的 secret 可见性测试。
+- R25 [open] 模型 secret 只能在绑定可信默认分支 SHA 的 schedule、workflow_dispatch 或默认分支 push campaign 中使用；R35 的已审核 candidate 固定 smoke 可在兼容结论前临时注入一次，repair job 则必须等无 key 兼容检查确认失败后才能注入。普通/fork PR、检出 PR 代码的 pull_request_target 和任意 ref 必须拿不到该 secret，publisher Git 写 token 继续隔离；surface: workflow permissions/jobs/event guard；evidence: 三个允许触发、candidate/repair 两个注入时机和各类拒绝触发的 secret 可见性测试。
 - R26 [open] Guardian 只响应 DSH 新版本或同根版本安装图变化造成的插件兼容问题；不得把无关依赖升级、普通 CI 故障、代码质量整理或日常仓库维护纳入自动维修 campaign；surface: detector/failure classifier/report；evidence: DSH 差分故障进入维修、无关故障只报告且不调模型。
 - R27 [open] 默认以 `17 */6 * * *` 每 6 小时探测 NPM latest/安装图，支持 workflow_dispatch 立即检查，并在默认分支 Guardian 配置或 lock 变化时触发；普通源码 push 不触发，cron 延迟或跳过中间版本后仍收敛到唤醒时 latest；surface: thin workflow/resolver/event dedupe；evidence: 三类允许触发、源码 push 静默、延迟与 latest 跳变测试。
 - R28 [open] onboarding 无历史 verified 时，先用本轮锁定的 repair DSH（默认 `0.1.1-rc.2`）在当前插件树执行完整 gate；PASS 才写第一份精确 verified 并测试当前 latest，失败则 `ONBOARDING_BLOCKED`、不调模型且不声称是 DSH 更新问题；surface: onboarding bootstrap/lock/report；evidence: 初始 PASS、初始 FAIL、动态 repair 解析和 repair/latest 同快照去重测试。
@@ -34,6 +34,7 @@
 - R32 [open] candidate 无需修复即 PASS 时仍必须持久化精确 verified lock 和简短报告，按既有 pull-request/auto-merge/direct-push 模式交付且不得改插件代码；不得以临时 artifact 或 Issue-only 状态代替，否则无法可靠去重；surface: lock/report/publisher；evidence: 三种模式的无代码 PASS 提交与下一次轮询 NOOP。
 - R33 [open] 默认 campaign 限额为 1,000,000 总 token、估算 10 CNY、60 分钟实际 repair/verifier 运行时间和 2 个 repair attempt，任一先耗尽即停止；30% 剩余提醒默认开启且只发一次，等待低价窗口不计时；surface: budget ledger/state machine/model request gate；evidence: 四种单独耗尽、跨 run 累计、一次 steer、等待不计时和单请求尾差测试。
 - R34 [open] repair DSH 默认可按需使用 DeepSeek 官方搜索，提示词建议优先查官方标准、文档、源码和 NPM 元数据作为辅助；Guardian 不配置搜索专属调用/uses 上限，搜索不可用只记录且不静默换模型、不替代 verifier、不单独判兼容失败，整体运行墙钟和 provider 限制仍有效；surface: repair prompt/search provider/report；evidence: 使用、不使用、不可用和无静默回退四类真实运行记录。
+- R35 [open] candidate 默认不得获得模型凭据；只有 onboarding 已审核 contract 声明 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 临时注入仓库同一套 provider/model/Secret 并执行一次固定真实回合，usage 计入同一 `repository + target version` campaign，缺 key 必须为 `BLOCKED`；V1 不建设 ephemeral proxy，普通 PR/fork/任意 ref 仍不得获得 secret；surface: smoke contract/job permissions/budget ledger；evidence: 默认无 key、显式真实回合、缺 key、PR secret 拒绝和 usage 累计五类运行记录。
 
 Current slice: R0 需求与架构设计
 

@@ -24,7 +24,7 @@ Project stage: technical
 - 已确认生成文件不按目录名猜测：有明确构建命令和对应源码时以源码为权威，verifier 必须在干净环境重建并要求已跟踪 `lib/dist` 逐字节一致，不可复现则失败；没有构建命令且 `lib` 是维护入口时把它当普通源码。可重复且一致的产物变化不额外强制人工 PR。
 - 已确认普通仓库文件可以新增、修改和删除，不再按重命名、可执行文件或根目录配置做复杂分级；已有保护清单中的控制面和验收面同样不可删除，其他误删交给原始 build/test/pack/install/contract/verifier 判失败，不维护第二份关键文件清单。
 - 已确认不设置改动文件数或增删行数的硬上限；报告只记录这些数据供人判断。防失控继续使用已有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier，不增加新配置。
-- 已确认 repair model secret 只在可信默认分支 SHA 的定时、手工或默认分支 push campaign 中使用，并且必须等无 key 检查确认不兼容后才注入；普通/fork PR、检出 PR 的 pull_request_target 和任意 ref 均不可获得。repair 与 publisher Git 写权限继续隔离。
+- 已确认模型 secret 只在可信默认分支 SHA 的定时、手工或默认分支 push campaign 中使用；已审核 contract 要求的 candidate 固定 smoke 可临时注入一次，repair DSH 必须等无 key 检查确认不兼容后才注入。普通/fork PR、检出 PR 的 pull_request_target 和任意 ref 均不可获得，publisher Git 写权限继续隔离。
 - 已再次收紧产品范围：只维护 DSH 更新造成的插件兼容性。无关依赖升级、普通 CI 修复、代码质量整理和通用仓库维护不进入自动维修；其他能力只有确实支撑探测、验证、修复、交付和报告时才加入。
 - 已确认默认每 6 小时检查一次 NPM latest 和实际安装图，支持手工立即检查，并在默认分支 Guardian 配置/lock 变化时触发；普通源码 push 不触发。cron 只负责唤醒，延迟或跨过中间版本时直接收敛到当时 latest。
 - 已确认 onboarding 没有历史 verified 时，直接用本轮解析并冻结的 repair DSH（默认 rc.2）跑完整 gate 建立第一份基线；通过后才测试当前 latest，失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。
@@ -34,6 +34,7 @@ Project stage: technical
 - 已确认 candidate 直接 PASS、无需修代码时仍提交 verified lock 和简短报告，以便下次可靠去重；默认小 PR，auto-merge/direct-push 开启时按对应模式交付，不改插件代码，也不增加另一套状态存储。
 - 已确认默认 campaign 上限为 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和最多 2 轮维修，任一先到即停；剩余 30% 时默认只发一次收敛消息，等待低价窗口不计入 60 分钟。全部数值可覆盖。
 - 已确认 repair DSH 默认允许使用 DeepSeek 官方搜索但不要求每轮都搜；提示词建议查官方标准、文档、源码和 NPM 元数据作辅助。Guardian 不设搜索专属次数/uses 上限，失败只记录并继续本地诊断，不换模型、不代替 verifier；整体 60 分钟和 provider 限制仍有效。
+- 已确认 candidate 默认不调用模型；只有 onboarding 已审核 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 跑一次固定真实回合。usage 计入同一版本预算，缺 key 为 `BLOCKED`；V1 删除 `ephemeral-proxy` 方案，并明确 candidate 在该 step 内能接触 key 的风险。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

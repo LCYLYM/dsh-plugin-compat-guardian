@@ -32,7 +32,7 @@ repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider
 
 报告会列出改动文件数和增删行数，但不会因为数字大就机械阻断；生成文件可能让这个数字失真。防死循环与失控仍由 token/金额/时间/轮次预算、每版本一次自动维修、保护路径和独立 verifier 负责，不增加新的行数配置。
 
-repair model 的 key 只会在可信默认分支上的定时、手工或默认分支 push campaign 中使用，而且先由无 key job 确认确实是 DSH 兼容失败，才进入带 key 的维修 job。普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和任意 ref 都拿不到 key；负责提交的 Git 写权限仍放在独立 publisher job。
+模型 key 只会在可信默认分支上的定时、手工或默认分支 push campaign 中使用。已审核 contract 要求的 candidate 固定 smoke 可以临时用一次；repair DSH 则必须先由无 key job 确认确实是 DSH 兼容失败，才进入带 key 的维修 job。普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和任意 ref 都拿不到 key；负责提交的 Git 写权限仍放在独立 publisher job。
 
 本项目只修“DSH 更新后插件不兼容”这一件事。它不是通用依赖升级机器人、CI 修复机器人或代码整理机器人；测试、预算、通知和交付功能都必须直接服务于发现、证明、修好并交付 DSH 兼容修复。
 
@@ -51,5 +51,7 @@ DSH 新版直接通过、无需修代码时，也会提交精确 verified lock �
 默认每个目标版本最多使用 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和 2 轮维修，任一上限先到就停止；剩余 30% 时默认只提醒 DSH 收敛一次。等待低价窗口不计入 60 分钟，所有数值都可由仓库覆盖。
 
 repair DSH 默认可以按需使用 DeepSeek 官方搜索，提示词会建议查官方标准、文档、源码和 NPM 元数据作辅助，但不要求每轮都搜索。Guardian 不设搜索专属次数限制；搜索失败会记录并继续本地诊断，不换模型，也不能代替独立 verifier。整体 60 分钟运行上限仍然有效。
+
+待测试的新 DSH 默认拿不到模型 key。只有 onboarding PR 中已审核的 smoke contract 明确写了 `requires_model_turn: true`，才会在一个无 Git 写权限的独立步骤里，用仓库配置的同一套 provider、model 和 Secret 跑一次固定真实模型回合；这次用量计入同一版本预算，缺 key 就报告 `BLOCKED`。V1 不增加临时代理服务，因此该测试进程在这一步确实能接触 key，这是启用真实模型 smoke 时需要接受的边界。
 
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

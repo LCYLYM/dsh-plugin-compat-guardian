@@ -42,7 +42,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | --- | --- |
 | D1 | V1 是仓库内 GitHub Actions 维修机器人，不建设中央服务、数据库或 GitHub App。 |
 | D2 | 只追踪 NPM `latest` 并最终收敛到最新；不为每个中间发布排队。 |
-| D3 | candidate 与 repair runner 是两个隔离角色；candidate 无模型长期密钥和 Git 写权限。 |
+| D3 | candidate 与 repair runner 是两个隔离角色；candidate 永远无 Git 写权限，默认也无模型凭据。只有已审核 smoke contract 明确要求真实模型回合时，candidate 才在单独固定 smoke step 临时获得仓库配置的模型 Secret。 |
 | D4 | repair DSH 默认 `0.1.1-rc.2`（项目立项时 NPM `latest`），允许配置为其他固定版、`latest` 或 `target`；每轮开始时解析成精确制品并冻结。 |
 | D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`；provider id、base URL、key 环境引用和 model id 均可覆盖，失败不得静默换 route。 |
 | D6 | 视觉由所选模型的图片输入能力提供；DeepSeek 联网搜索是 DSH 的独立 search provider 调用，不把两者混称为一个能力。 |
@@ -66,7 +66,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D24 | 仓库有明确构建命令时以源码为权威，repair 后由 verifier 干净重建，已跟踪的 `lib/dist` 必须与重建结果一致；无法复现则失败。仓库没有构建命令且 `lib` 本身被维护时，把它当普通源码。 |
 | D25 | repair DSH 可新增、修改和删除普通仓库文件；不为文件创建、重命名或删除另设复杂分级。不能删除的内容直接复用 D21 的保护清单，其他误删由原始 pack/install/contract/verifier 自然判失败。 |
 | D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
-| D27 | repair model secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign，并且只在无 key 兼容检查确认失败后注入 repair job；PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 不得获得它。 |
+| D27 | 模型 Secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign；D37 的已审核 candidate 固定 smoke 可在兼容结论前获得一次，repair DSH 则只在无 key 检查确认失败后获得。PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 都不得获得它。 |
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
 | D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置/lock 变更触发；普通源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
 | D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
@@ -76,6 +76,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock 与简短报告，避免下次重复测试；交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码，也不增加 Issue-only 状态源。 |
 | D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
 | D36 | DeepSeek 官方搜索默认允许且由 repair DSH 按需使用；默认提示词建议把官方标准、文档和源码作为辅助证据。Guardian 不设置搜索次数/uses 专属上限，搜索仍受整体 60 分钟运行边界和 provider 自身限制。 |
+| D37 | candidate 默认不调用模型。只有 onboarding 已审核的 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 执行一次固定真实回合；usage 计入同一 campaign，缺 key 为 `BLOCKED`。V1 不建设 ephemeral proxy。 |
 
 ## 4. 最小架构
 
@@ -202,6 +203,8 @@ DSH 默认从 `package.json`/manifest、源码入口、README、已有 test/buil
 
 用户审核的不是一段泛化提示词，而是随后每次维修都会执行的确定性断言。维修中若发现 contract 本身需变更，只能另开 `CONTRACT_CHANGE_REQUIRED` PR；不能把“改测试让它过”混进兼容修复。
 
+默认 contract 不调用模型。只有插件能力确实无法通过本地事件、页面、CLI 或 API 证明时，onboarding PR 才可在 contract 中写入 `requires_model_turn: true`，同时固定输入、预期机械断言和所用 fixture。用户合并这份 contract 就表示同意后续 candidate 验证在单独 smoke step 临时使用仓库配置的同一套 provider/model/Secret；这不是每次版本更新都要再次授权的新开关。
+
 插件新增入口或主要能力时才需要再次审核 contract PR，不要求每个 DSH 新版本都人工重审同一合同。
 
 onboarding PR 合并后，lock 里还没有历史 `verified`。这时不增加一个新的 baseline 配置项，而是先把本轮已解析并冻结的 repair DSH 当作启动参照（默认 `0.1.1-rc.2`），在当前插件树上执行同一套完整 gate：
@@ -227,7 +230,7 @@ onboarding PR 合并后，lock 里还没有历史 `verified`。这时不增加�
 | G2 安装生命周期 | fresh `DSH_HOME` 中真实 pack/add、dump-config、remove、再次 dump。 |
 | G3 真实启动 | 动态端口启动真实 `dsh web`/headless，HTTP 与进程生命周期正常。 |
 | G4 插件行为 | 至少一个插件专属 CLI/API/浏览器断言，不只检查首页 200。 |
-| G5 视觉（适用时） | 给当前解析模型传入真实图片或截图，消费结果；不能用文字替代图片。 |
+| G5 模型/视觉（contract 要求时） | 在单独 step 执行一次固定真实模型回合；视觉插件必须传入并消费真实图片或截图，不能用文字替代图片。缺少所需凭据时为 `BLOCKED`。 |
 | G6 清理与幂等 | 端口释放、进程回收、重复安装/卸载不污染下一轮。 |
 | G7 交付安全 | 保护路径 denylist、secret scan、contract digest 和报告 schema 均通过。 |
 
@@ -254,13 +257,14 @@ $RUNNER_TEMP/dsh-compat/<event-key>/<attempt>/
   artifacts/
 ```
 
-- candidate 不获得 `DEEPSEEK_API_KEY`、Git 写 token、`.git` 或 Docker socket。
+- candidate 永远不获得 Git 写 token、可复用的 `.git` 凭据或 Docker socket，默认也不获得模型 key。
+- 唯一例外是已审核 smoke contract 明确 `requires_model_turn: true`：Guardian 在单独 smoke step 中只为一次固定回合注入仓库配置的同一个 provider/model/Secret，并把 usage 计入当前 `repository + target version` campaign。缺 key 直接标记 `BLOCKED`，不假装完成。
+- 该固定 smoke step 中 candidate 进程能够接触模型 Secret，这是不用额外代理服务的明确取舍；V1 不建设 `ephemeral-proxy`，也不声称能在进程内隐藏 key。
 - repair DSH 只获得 DSH 原生 provider/settings/credentials 所需的模型凭据和受限 worktree。
-- repair campaign 只能绑定可信默认分支 SHA，并由该 SHA 上的 `schedule`、`workflow_dispatch` 或默认分支 `push` 触发；普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和用户传入的任意 ref 都不能注入 repair model secret。
+- model campaign 只能绑定可信默认分支 SHA，并由该 SHA 上的 `schedule`、`workflow_dispatch` 或默认分支 `push` 触发；普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和用户传入的任意 ref 都不能注入模型 Secret。
 - 先在无 key job 完成版本探测和兼容失败确认，确实需要修代码时才向 repair job 注入模型凭据。repair DSH 会运行仓库命令，同一 job 内的可信仓库代码理论上可能接触该凭据，因此这里明确沿用“默认分支即仓库信任边界”，不声称同 job 内完全隔绝。
 - publisher 在 verifier PASS 后单独获得最小 GitHub 写权限；repair 进程永远接触不到它。
 - checkout 使用 `persist-credentials: false`；报告和 artifacts 在写入前脱敏。
-- 必须经过 candidate 真实模型 turn 才能验收的插件，默认需要单次低额度凭据；不能签发时标记 BLOCKED，不把长期 key 交给 candidate。
 
 ## 10. Repair DSH、模型、视觉与搜索
 
@@ -308,7 +312,7 @@ repair DSH 默认可以搜索，不要求每次维修都搜。默认提示词建
 
 ## 12. Campaign 预算
 
-预算范围固定为 `repository + target root DSH version`，并跨 Actions rerun、schedule、repair attempt 和通知重试累积：
+预算范围固定为 `repository + target root DSH version`，并跨 Actions rerun、schedule、candidate 固定模型 smoke、repair attempt 和通知重试累积：
 
 ```text
 hard stop = token / CNY / wall time / attempt 任一启用上限耗尽
@@ -317,7 +321,7 @@ steer     = 任一主要预算剩余比例 <= 30%，且本 campaign 尚未发送
 
 可覆盖默认值为 `max_tokens=1000000`、`max_cny=10`、`max_wall_minutes=60`、`max_attempts=2`。墙钟只累计实际执行 repair 与 verifier 的时间；跨 run 等待低价窗口的 `WAITING_FOR_PRICE` 不计时，否则一次正常峰谷等待就会把预算耗尽。任一启用上限先到都拒绝下一次模型请求或 repair attempt；已经发出的单次请求仍可能产生少量尾差。
 
-MVP 累计 DSH/DeepSeek 已经暴露的 token usage，包括主 repair session、子 agent、压缩和重试。独立 DeepSeek 搜索目前不暴露 usage，因此只记录调用次数、所选模型和结果状态，不为这点小额误差另造计费通道。
+MVP 累计 DSH/DeepSeek 已经暴露的 token usage，包括 contract 要求的 candidate 固定模型 smoke、主 repair session、子 agent、压缩和重试。独立 DeepSeek 搜索目前不暴露 usage，因此只记录调用次数、所选模型和结果状态，不为这点小额误差另造计费通道。
 
 人民币按带 revision 的 provider/model/tariff 快照估算：
 
@@ -475,4 +479,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定插件 smoke 必须真实调用模型时，candidate DSH 如何获得凭据而不引入额外代理服务。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定真实模型 smoke 应断言哪些机械事实，避免把模型回答的具体文案当成兼容 PASS。其余已经确认的决定不因后续讨论自动重开。
