@@ -7,6 +7,6 @@ dist/
 coverage/
 tmp/
 artifacts/
+.guardian-output/
 codex_records/
 *.log
-

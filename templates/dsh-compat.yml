@@ -1,0 +1,28 @@
+name: DSH compatibility guardian
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .dsh-compat.yml
+      - .dsh-compat.lock.json
+      - compatibility/dsh-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  guardian:
+    # Replace both placeholders during onboarding. The ref must be a full commit SHA.
+    uses: __GUARDIAN_REPOSITORY__/.github/workflows/guardian.yml@__GUARDIAN_FULL_SHA__
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    with:
+      guardian_repository: __GUARDIAN_REPOSITORY__
+      guardian_ref: __GUARDIAN_FULL_SHA__
+      runner: ubuntu-24.04

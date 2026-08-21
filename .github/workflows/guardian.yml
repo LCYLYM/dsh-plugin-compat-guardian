@@ -1,0 +1,188 @@
+name: DSH plugin compatibility guardian
+
+on:
+  workflow_call:
+    inputs:
+      guardian_repository:
+        description: Repository containing this Guardian engine
+        required: true
+        type: string
+      guardian_ref:
+        description: Full 40-character Guardian commit SHA
+        required: true
+        type: string
+      runner:
+        description: One GitHub-hosted or self-hosted runner label
+        required: false
+        default: ubuntu-24.04
+        type: string
+      target_dsh:
+        description: Optional exact DSH version for a manual campaign; empty means config latest
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: dsh-compat-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.verify.outputs.status }}
+      candidate_version: ${{ steps.verify.outputs.candidate_version }}
+    steps:
+      - name: Validate immutable Guardian ref
+        env:
+          GUARDIAN_REF: ${{ inputs.guardian_ref }}
+        run: |
+          if [[ ! "$GUARDIAN_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'guardian_ref must be a full lowercase 40-character commit SHA' >&2
+            exit 2
+          fi
+
+      # actions/checkout v4, pinned 2026-08-21.
+      - name: Check out plugin repository without write credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: target
+          persist-credentials: false
+
+      # actions/checkout v4, pinned 2026-08-21.
+      - name: Check out pinned Guardian engine
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ${{ inputs.guardian_repository }}
+          ref: ${{ inputs.guardian_ref }}
+          path: guardian
+          persist-credentials: false
+
+      # actions/setup-node v4, pinned 2026-08-21.
+      - name: Set up Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: guardian/package-lock.json
+
+      # pnpm/action-setup v4, pinned 2026-08-21. DSH plugin management invokes pnpm.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: Install Guardian engine
+        working-directory: guardian
+        run: npm ci
+
+      - name: Run no-model compatibility verifier
+        id: verify
+        continue-on-error: true
+        env:
+          TARGET_DSH: ${{ inputs.target_dsh }}
+          REPORT_DIRECTORY: ${{ runner.temp }}/guardian-report
+        run: |
+          args=(verify --repo "$GITHUB_WORKSPACE/target" --output "$REPORT_DIRECTORY")
+          if [[ -n "$TARGET_DSH" ]]; then
+            args+=(--dsh-version "$TARGET_DSH")
+          fi
+          set +e
+          node guardian/bin/dsh-plugin-compat-guardian.js "${args[@]}"
+          verifier_exit=$?
+          set -e
+          status=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).status")
+          candidate=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).candidate?.version ?? ''")
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "candidate_version=$candidate" >> "$GITHUB_OUTPUT"
+          if [[ "$status" == 'PASS' ]]; then
+            cp target/.dsh-compat.lock.json "$REPORT_DIRECTORY/verified-lock.json"
+          fi
+          exit "$verifier_exit"
+
+      # actions/upload-artifact v4, pinned 2026-08-21.
+      - name: Upload sanitized mechanical evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dsh-guardian-${{ github.run_id }}
+          path: ${{ runner.temp }}/guardian-report
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Preserve verifier failure
+        if: steps.verify.outcome == 'failure'
+        run: exit 1
+
+  publish:
+    needs: verify
+    if: needs.verify.result == 'success' && needs.verify.outputs.status == 'PASS'
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # actions/checkout v4, pinned 2026-08-21. Only this job receives write credentials.
+      - name: Check out exact source for publication
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: target
+          persist-credentials: true
+
+      # actions/download-artifact v4, pinned 2026-08-21.
+      - name: Download verified evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: dsh-guardian-${{ github.run_id }}
+          path: evidence
+
+      - name: Reject stale source and prepare one lock commit
+        id: prepare
+        working-directory: target
+        env:
+          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
+        run: |
+          expected=$(node -p "JSON.parse(require('fs').readFileSync('../evidence/report.json', 'utf8')).source.commit")
+          actual=$(git rev-parse HEAD)
+          if [[ "$actual" != "$expected" ]]; then
+            echo "STALE_SOURCE: verified $expected but default branch is $actual" >&2
+            exit 2
+          fi
+          cp ../evidence/verified-lock.json .dsh-compat.lock.json
+          if git diff --quiet -- .dsh-compat.lock.json; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
+          branch="automation/dsh-compat/$safe_version"
+          if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            echo "Guardian branch $branch already exists; waiting for its existing PR instead of publishing again."
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name 'dsh-compat-guardian[bot]'
+          git config user.email 'dsh-compat-guardian[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add .dsh-compat.lock.json
+          git commit -m "ci: verify DSH $CANDIDATE_VERSION compatibility"
+          git push --set-upstream origin "$branch"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open the default human-reviewed PR
+        if: steps.prepare.outputs.changed == 'true'
+        working-directory: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.prepare.outputs.branch }}
+          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
+        run: |
+          gh pr create \
+            --head "$BRANCH" \
+            --title "ci: support DSH $CANDIDATE_VERSION" \
+            --body-file ../evidence/report.md

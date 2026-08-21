@@ -1,0 +1,30 @@
+{
+  "name": "dsh-plugin-compat-guardian",
+  "version": "0.1.0-dev.0",
+  "description": "Repository-installed compatibility verifier and repair orchestrator for DeepSeek Harness plugins",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "dsh-plugin-compat-guardian": "bin/dsh-plugin-compat-guardian.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check bin/dsh-plugin-compat-guardian.js && node --test test/*.test.js",
+    "guardian": "node bin/dsh-plugin-compat-guardian.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "semver": "^7.7.2",
+    "yaml": "^2.8.1"
+  },
+  "license": "MIT"
+}

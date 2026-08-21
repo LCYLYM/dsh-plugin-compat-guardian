@@ -1,0 +1,8 @@
+- id: agent-default-model
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-flash-vision-exp
+
+- id: web-search-deepseek
+  config:
+    model: deepseek-v4-flash-vision-exp
