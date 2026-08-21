@@ -14,11 +14,11 @@ V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目�
 
 repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider/model 默认使用 `deepseek-official/deepseek-v4-flash-vision-exp`；DSH 版本、provider、base URL、key 的环境变量引用和 model ID 均可由仓库覆盖，但一次 campaign 开始后必须锁定实际值与制品完整性，不能中途漂移或静默回退。候选 DSH 仍跟随运行时的当前 `latest` 并最终收敛到最新制品。
 
-有时 NPM 上显示的 DSH 版本号没变，但它依赖的内部组件已经更新。同一次测试或维修会锁定整套依赖，保证前后使用同一套代码；以后的定时巡检则重新模拟“用户今天全新运行 `npx` 会装到什么”。如果实际安装内容变了，Guardian 会重新执行仓库测试、插件打包安装、`dump-config`、真实 `dsh web` 启动和插件专属 smoke 断言。这时 GitHub Actions 仍在正常运行，只是还不调用 repair DSH 的模型、不消耗模型 token。测试失败后才进入维修；如果这个根版本已经用过一次自动维修，就提示用户把 `resetBudget` 从 `N` 改成 `Y` 后继续。
+有时 NPM 上显示的 DSH 版本号没变，但它依赖的内部组件已经更新。同一次测试或维修会锁定整套依赖，保证前后使用同一套代码；以后的定时巡检则重新模拟“用户今天全新运行 `npx` 会装到什么”。如果实际安装内容变了，Guardian 会重新执行仓库测试、插件打包安装、`dump-config`、真实 `dsh web` 启动和插件专属 smoke 断言。这时仍不调用 repair DSH；只有 contract 明确要求真实模型 smoke 时，检测本身才会产生并记录模型 token。测试失败后才进入维修；如果这个根版本已经用过一次自动维修，就提示用户把 `resetBudget` 从 `N` 改成 `Y` 后继续。
 
 该默认模型由当前 DSH 的 `deepseek-official` provider 声明为 `text + image`，可直接消费截图等视觉证据。DeepSeek 官方联网搜索则是 DSH 的独立 search provider，会产生另一笔模型调用；它不是“视觉模型自带搜索”。默认同样选择上述模型，仓库可以覆盖；搜索缺少 token usage 时只记录调用次数，不为几分钱的误差另造计费系统。
 
-默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，只有确实需要修代码时才等待低价时段调用模型。MVP 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；不单独实现 OpenAI-compatible 账单解析。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。交付默认为 PR，同时支持显式开启 `auto-merge` 或 `direct-push`。
+默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，contract 要求的真实模型 smoke 也不等待低价。只有确实需要修代码时才等待低价时段调用 repair DSH。MVP 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；不单独实现 OpenAI-compatible 账单解析。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。交付默认为 PR，同时支持显式开启 `auto-merge` 或 `direct-push`。
 
 维修时默认允许改当前仓库内普通插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
 
@@ -54,6 +54,10 @@ repair DSH 默认可以按需使用 DeepSeek 官方搜索，提示词会建议�
 
 待测试的新 DSH 默认拿不到模型 key。只有 onboarding PR 中已审核的 smoke contract 明确写了 `requires_model_turn: true`，才会在一个无 Git 写权限的独立步骤里，用仓库配置的同一套 provider、model 和 Secret 跑一次固定真实模型回合；这次用量计入同一版本预算，缺 key 就报告 `BLOCKED`。V1 不增加临时代理服务，因此该测试进程在这一步确实能接触 key，这是启用真实模型 smoke 时需要接受的边界。
 
-真实模型 smoke 不检查模型必须回答某句话，也不评价回答“好不好”。它只检查固定输入确实被插件处理、附件或图片确实进入模型请求、provider 成功返回、DSH 收到非空结果；用户可在 onboarding contract 中增加更强的确定性断言，但维修机器人不能修改它。
+真实模型 smoke 不检查模型必须回答某句话，也不评价回答“好不好”。它只检查本轮冻结输入确实被插件处理、附件或图片确实进入模型请求、provider 成功返回、DSH 收到非空结果；用户可在 onboarding contract 中增加更强的确定性断言，但维修机器人不能修改它。
+
+模型 smoke 默认只测新 DSH，沿用“插件当前本来就是好的”这一实用假设；用户可在 onboarding contract 选择旧版和新版各测一次。发生修复后必须在新 DSH 上复测，完全相同的快照会去重。fixture 默认使用已审核固定文件，也可允许 DSH 在隔离区自行寻找、生成或下载公开文件；一旦选中，本 campaign 内就冻结同一份内容。timeout、429 或 provider 5xx 只立即重试一次，再失败就标记 `BLOCKED_EXTERNAL`，等待手工运行、相关配置变化或新 DSH 版本，不让六小时定时任务循环烧调用。
+
+PR 和报告只保存输入 hash、机械事件、状态、耗时、usage 与脱敏错误；失败的脱敏 Actions artifact 保留 7 天。key、认证头、完整请求和完整模型对话都不持久化。
 
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

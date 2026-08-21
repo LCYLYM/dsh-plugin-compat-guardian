@@ -34,7 +34,7 @@ repair:
 credentials:
   # 这些是可配置的 env 引用；workflow 将同名 GitHub Actions secrets 映射给 DSH。
   # candidate 默认拿不到 key；只有已审核 contract 明确 requires_model_turn: true 时，
-  # 才会在单独的固定 smoke step 中临时使用同一个 Secret。
+  # 才会在独立 smoke step 中临时使用同一个 Secret。
   api_key_env: DEEPSEEK_API_KEY
   # 可选；留空时使用 DSH/provider 的默认端点。
   base_url_env: DEEPSEEK_BASE_URL
@@ -54,6 +54,8 @@ smoke:
   # 可选自然语言补充；留空时由 DSH 自行发现。
   hints: ""
   # 是否需要一次真实模型回合由已审核 contract 的 requires_model_turn 控制，默认 false。
+  # contract 中 model_turn_scope 默认 candidate-only，可选 differential。
+  # fixture_mode 默认 fixed，也可选 agent-selected；动态选中的文件会在本 campaign 内冻结。
   # 缺少所需 Secret 时结果是 BLOCKED；V1 不建设 ephemeral proxy。
 
 gates:

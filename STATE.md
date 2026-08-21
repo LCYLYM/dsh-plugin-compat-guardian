@@ -15,7 +15,7 @@ Project stage: technical
 - 已确认 repair DSH 默认 `0.1.1-rc.2`（项目立项时 NPM latest）、repair model 默认 `deepseek-v4-flash-vision-exp`，二者和价格窗口均可覆盖，但每个 campaign 必须冻结实际解析值；同时已锁定差分兼容契约、三种交付模式、campaign 级预算、单次自动维修和 `N -> Y` 人工恢复语义。
 - 已确认视觉由 repair model 提供；官方联网搜索由 DSH 独立 search provider 发起另一笔模型请求，不能混写为同一能力。
 - 已确认 V1 只统计 DSH/DeepSeek 暴露的 token usage，并按默认官方价格映射估算；搜索缺少 usage 时只记调用次数，不做复杂预留，OpenAI-compatible 账单解析不进 V1。provider、base URL、key 环境引用和 model id 均可配置。
-- 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；Actions 仍会运行，但这一步不调用 repair model、不消耗模型 token，也不新建预算。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加配置项。
+- 已确认同一个根 DSH 版本的实际安装内容发生变化时，Guardian 会重跑仓库测试、插件打包安装、dump-config、真实启动和 smoke 断言；这一步不调用 repair model，也不新建预算。若 contract 要求真实模型 smoke，其 usage 仍计入同一版本 campaign。只有测试失败且该版本已经用过自动维修，才要求用户执行现有 `N -> Y` reset。该行为不增加顶层配置项。
 - 已从公开正式仓库 `LCYLYM/dsh-attachments@028dc1f` 全新复制并创建独立 public fixture：`LCYLYM/dsh-attachments-guardian-fixture`。fixture `main@17edf22` 与远端一致、不是 GitHub fork、保留完整源历史，10/10 测试和 `npm pack --dry-run` 通过；README 已标明测试用途，`private: true` 防止误发 NPM。
 - 已确认 M0 分两步：先在没有模型 key 的情况下证明监控、真实兼容测试、报告和去重；再在隔离测试分支恢复历史 `httpServer` 旧错误，验证模型维修和 PR。两个阶段都不开 auto-merge/direct-push。
 - 已确认 repair DSH 默认可修改当前仓库内普通插件文件，包括源码、manifest、安装脚本、仓库测试和文档；不维护逐仓库长 allowlist。短禁止清单保护 workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径，最终 PASS 由这些不可修改的验收面决定。
@@ -35,7 +35,11 @@ Project stage: technical
 - 已确认默认 campaign 上限为 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和最多 2 轮维修，任一先到即停；剩余 30% 时默认只发一次收敛消息，等待低价窗口不计入 60 分钟。全部数值可覆盖。
 - 已确认 repair DSH 默认允许使用 DeepSeek 官方搜索但不要求每轮都搜；提示词建议查官方标准、文档、源码和 NPM 元数据作辅助。Guardian 不设搜索专属次数/uses 上限，失败只记录并继续本地诊断，不换模型、不代替 verifier；整体 60 分钟和 provider 限制仍有效。
 - 已确认 candidate 默认不调用模型；只有 onboarding 已审核 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 跑一次固定真实回合。usage 计入同一版本预算，缺 key 为 `BLOCKED`；V1 删除 `ephemeral-proxy` 方案，并明确 candidate 在该 step 内能接触 key 的风险。
-- 已确认真实模型 smoke 不匹配具体回答措辞，也不做主观质量评分；PASS 只看固定输入被插件处理、附件/图片确实进入请求、provider 成功且 DSH 收到非空结果。用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。
+- 已确认真实模型 smoke 不匹配具体回答措辞，也不做主观质量评分；PASS 只看本轮冻结输入被插件处理、附件/图片确实进入请求、provider 成功且 DSH 收到非空结果。用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。
+- 已确认真实模型 smoke 默认只测 candidate，contract 可选旧/new differential；repair 后 candidate 必须复测，相同快照/插件树/contract/输入自动去重。smoke 立即执行，不等待低价。
+- 已确认模型 smoke 外部错误只立即重试一次，再失败进入 `BLOCKED_EXTERNAL`，不维修、不由六小时 schedule 循环重试，等待手工运行、相关配置变化或新目标版本。
+- 已确认 fixture 默认使用已审核固定文件，也可允许 DSH 在隔离区自行寻找、生成或下载公开文件；选择后冻结实际内容/来源/hash，整个 campaign 比较与复测不得更换。
+- 已确认模型 smoke 的 commit/PR/report 只保存机械元数据和脱敏错误；失败脱敏 artifact 保留 7 天，不持久化 key、认证头、完整请求或完整模型对话。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 
