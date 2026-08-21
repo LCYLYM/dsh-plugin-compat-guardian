@@ -33,6 +33,7 @@
 - R31 [open] onboarding workflow 必须以完整 commit SHA 引用 Guardian reusable workflow并注释发布版本，禁止 `main`/`v1` 等可移动 ref；V1 不实现 Guardian 自升级检测或更新 PR，DSH latest 变化不得改该 SHA；surface: installed thin workflow/non-goals；evidence: SHA 固定回读、tag/branch 拒绝和 DSH 更新时 workflow 零 diff。
 - R32 [open] candidate 无需修复即 PASS 时仍必须持久化精确 verified lock 和简短报告，按既有 pull-request/auto-merge/direct-push 模式交付且不得改插件代码；不得以临时 artifact 或 Issue-only 状态代替，否则无法可靠去重；surface: lock/report/publisher；evidence: 三种模式的无代码 PASS 提交与下一次轮询 NOOP。
 - R33 [open] 默认 campaign 限额为 1,000,000 总 token、估算 10 CNY、60 分钟实际 repair/verifier 运行时间和 2 个 repair attempt，任一先耗尽即停止；30% 剩余提醒默认开启且只发一次，等待低价窗口不计时；surface: budget ledger/state machine/model request gate；evidence: 四种单独耗尽、跨 run 累计、一次 steer、等待不计时和单请求尾差测试。
+- R34 [open] repair DSH 默认可按需使用 DeepSeek 官方搜索，提示词建议优先查官方标准、文档、源码和 NPM 元数据作为辅助；Guardian 不配置搜索专属调用/uses 上限，搜索不可用只记录且不静默换模型、不替代 verifier、不单独判兼容失败，整体运行墙钟和 provider 限制仍有效；surface: repair prompt/search provider/report；evidence: 使用、不使用、不可用和无静默回退四类真实运行记录。
 
 Current slice: R0 需求与架构设计
 

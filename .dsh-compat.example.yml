@@ -29,8 +29,7 @@ repair:
   search:
     enabled: true
     model: deepseek-v4-flash-vision-exp
-    max_calls: 3
-    max_uses_per_call: 3
+    # 默认提示词建议按需搜索官方标准/文档/源码；Guardian 不设置搜索专属次数上限。
 
 credentials:
   # 这些是可配置的 env 引用；workflow 将同名 GitHub Actions secrets 映射给 DSH。

@@ -75,6 +75,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D33 | 插件 workflow 用完整 commit SHA 引用 Guardian reusable workflow，并注释人类可读版本；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA；以后确需升级时由用户手工改一行或重跑安装。 |
 | D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock 与简短报告，避免下次重复测试；交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码，也不增加 Issue-only 状态源。 |
 | D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
+| D36 | DeepSeek 官方搜索默认允许且由 repair DSH 按需使用；默认提示词建议把官方标准、文档和源码作为辅助证据。Guardian 不设置搜索次数/uses 专属上限，搜索仍受整体 60 分钟运行边界和 provider 自身限制。 |
 
 ## 4. 最小架构
 
@@ -275,7 +276,9 @@ model:      deepseek-v4-flash-vision-exp
 
 当前官方 DSH 发布制品已把默认模型声明为 `inputModalities: [text, image]`，所以 repair agent 可以直接查看失败截图、页面渲染、图表或插件 UI，而不需要另造视觉 sidecar。
 
-联网搜索必须单列：`@deepseek-ai/dsh-web-search-deepseek` 会通过 Anthropic 兼容端点发起一笔独立模型请求并调用服务器端 `web_search` 工具。它复用 API key，但不自动复用 chat-completions 的 base URL。默认让搜索 provider 也选择视觉模型；仓库可覆盖，真实搜索 probe 未通过时应明确失败，不能偷偷换普通 Flash。
+联网搜索必须单列：`@deepseek-ai/dsh-web-search-deepseek` 会通过 Anthropic 兼容端点发起一笔独立模型请求并调用服务器端 `web_search` 工具。它复用 API key，但不自动复用 chat-completions 的 base URL。默认让搜索 provider 也选择视觉模型；仓库可覆盖，但不能偷偷换普通 Flash。
+
+repair DSH 默认可以搜索，不要求每次维修都搜。默认提示词建议在本地安装包、日志和仓库证据不足时，用 DeepSeek 官方搜索补充 DSH 官方源码/文档、NPM 元数据及相关标准；搜索结果只是诊断辅助，不能替代独立 verifier。Guardian 不增加 `max_calls` 或 `max_uses_per_call`，也不把搜索失败单独判为兼容失败；不可用时记录状态并继续本地诊断。所谓“不限制”只是不设搜索专属次数门，整体 60 分钟实际运行上限和 provider 自身限制仍然生效。
 
 ## 11. 维修合同
 
@@ -472,4 +475,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定 DeepSeek 联网搜索默认是否开启，以及什么情况下才允许 repair DSH 调用。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定插件 smoke 必须真实调用模型时，candidate DSH 如何获得凭据而不引入额外代理服务。其余已经确认的决定不因后续讨论自动重开。
