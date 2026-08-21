@@ -28,6 +28,7 @@
 - R26 [open] Guardian 只响应 DSH 新版本或同根版本安装图变化造成的插件兼容问题；不得把无关依赖升级、普通 CI 故障、代码质量整理或日常仓库维护纳入自动维修 campaign；surface: detector/failure classifier/report；evidence: DSH 差分故障进入维修、无关故障只报告且不调模型。
 - R27 [open] 默认以 `17 */6 * * *` 每 6 小时探测 NPM latest/安装图，支持 workflow_dispatch 立即检查，并在默认分支 Guardian 配置或 lock 变化时触发；普通源码 push 不触发，cron 延迟或跳过中间版本后仍收敛到唤醒时 latest；surface: thin workflow/resolver/event dedupe；evidence: 三类允许触发、源码 push 静默、延迟与 latest 跳变测试。
 - R28 [open] onboarding 无历史 verified 时，先用本轮锁定的 repair DSH（默认 `0.1.1-rc.2`）在当前插件树执行完整 gate；PASS 才写第一份精确 verified 并测试当前 latest，失败则 `ONBOARDING_BLOCKED`、不调模型且不声称是 DSH 更新问题；surface: onboarding bootstrap/lock/report；evidence: 初始 PASS、初始 FAIL、动态 repair 解析和 repair/latest 同快照去重测试。
+- R29 [open] 每个 attempt 锁定默认分支 base commit；publish 前分支 SHA 变化必须转为 `STALE_SOURCE` 并拒绝旧 PR 更新、auto-merge/direct-push，随后只先对新 SHA 做无模型复测。未调用模型时保留原自动维修机会，已调用时源码变化不得重置同版本预算或维修次数；surface: campaign state/publisher guard/lock；evidence: 等待、维修、验证和发布四个阶段的竞态测试。
 
 Current slice: R0 需求与架构设计
 

@@ -28,6 +28,7 @@ Project stage: technical
 - 已再次收紧产品范围：只维护 DSH 更新造成的插件兼容性。无关依赖升级、普通 CI 修复、代码质量整理和通用仓库维护不进入自动维修；其他能力只有确实支撑探测、验证、修复、交付和报告时才加入。
 - 已确认默认每 6 小时检查一次 NPM latest 和实际安装图，支持手工立即检查，并在默认分支 Guardian 配置/lock 变化时触发；普通源码 push 不触发。cron 只负责唤醒，延迟或跨过中间版本时直接收敛到当时 latest。
 - 已确认 onboarding 没有历史 verified 时，直接用本轮解析并冻结的 repair DSH（默认 rc.2）跑完整 gate 建立第一份基线；通过后才测试当前 latest，失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。
+- 已确认 campaign 锁定启动时的默认分支 commit；发布前分支变化就将旧 attempt 标为 `STALE_SOURCE` 并禁止发布，下一次只先对新 commit 无模型复测。此前未调用模型则保留那一次维修机会，已经调用则源码变化不重置预算，仍需 reset 才能再次调模型。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

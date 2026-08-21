@@ -70,6 +70,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
 | D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置/lock 变更触发；普通源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
 | D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
+| D31 | campaign 锁定启动时的默认分支 commit。发布前若分支已前进，旧 attempt 进入 `STALE_SOURCE` 且不得发布；下一次只先对新 commit 做无模型复测。此前未调用模型则保留唯一维修机会，已经调用则必须 reset 才能再次调模型。 |
 
 ## 4. 最小架构
 
@@ -150,16 +151,20 @@ stateDiagram-v2
     BASELINE_TESTING --> WAITING_FOR_PRICE: 需要模型且当前为高峰
     BASELINE_TESTING --> REPAIRING: 需要模型且允许开始
     WAITING_FOR_PRICE --> SUPERSEDED: latest 已变化
+    WAITING_FOR_PRICE --> STALE_SOURCE: 默认分支已变化
     WAITING_FOR_PRICE --> REPAIRING: 进入允许窗口/手工覆盖
     REPAIRING --> VERIFYING: 产生受限 diff
     VERIFYING --> PASS: 原始 contract 通过
     VERIFYING --> REPAIRING: 仍有预算且失败签名有进展
     VERIFYING --> FROZEN: 尝试/预算/时间到限
     REPAIRING --> SUPERSEDED: latest 已变化
+    REPAIRING --> STALE_SOURCE: 默认分支已变化
     PASS --> PUBLISHING
+    PUBLISHING --> STALE_SOURCE: 发布前默认分支已变化
     PUBLISHING --> [*]
     FROZEN --> [*]
     SUPERSEDED --> [*]
+    STALE_SOURCE --> [*]
     NOOP --> [*]
 ```
 
@@ -172,7 +177,7 @@ stateDiagram-v2
 5. bot commit、workflow 自身 push 和已存在的确定分支不会递归创建新 campaign。
 6. repair agent 无权提高预算、改 workflow、改 smoke contract、改 lock 或判定 PASS。
 7. 新 `latest` 会使旧任务 `SUPERSEDED`，旧任务不能迟到发布。
-8. 冻结目标只有用户 push、额度增加、有效 reset 边沿或新的制品/源码证据才能恢复。
+8. 默认分支源码变化只允许下一次无模型复测，不重置预算或 `automaticRepairUsed`；此前已经调用过模型时，同版本仍需额度增加或有效 reset 边沿才能再次维修。
 
 ## 7. Onboarding：只审核一次什么
 
@@ -366,6 +371,7 @@ cost = cache_hit_input * hit_rate
   },
   "campaign": {
     "targetVersion": null,
+    "basePluginCommit": null,
     "status": "IDLE",
     "automaticRepairUsed": false,
     "budgetEpoch": 0,
@@ -384,6 +390,8 @@ cost = cache_hit_input * hit_rate
 - 到限时状态变为 `FROZEN`，publisher 保持 `resetBudget: N` 并在 Issue 中给出操作说明。
 - 用户把 `N` 改成 `Y/y` 后 commit + push，commit SHA 就是一次 reset nonce。
 - 同一 SHA 在 workflow rerun 或 schedule 中只消费一次；静态 `Y` 不会反复充值。
+- 每个 attempt 在开始时记录 `basePluginCommit`。publisher 执行任何 PR 更新、auto-merge 或 direct-push 前重新读取默认分支 SHA；不一致就写入 `STALE_SOURCE`，不得发布旧 diff。
+- 下一次定时或手工检查对新 SHA 先执行无模型 gate。旧 attempt 尚未调用模型时，campaign 仍保留那一次自动维修机会；已经调用过时，源码变化本身不能再送一次模型预算，失败后继续等待 reset。
 - reset 开启新 budget epoch，旧 epoch 的实际消耗保留在报告和累计总额里，不伪装成没花过。
 - 再次 reset 需要新的 `N -> Y` 边沿；用户也可以只提高配置上限，此时保留原 consumed 并获得新增余量。
 - repair agent 不能编辑 lock；用户控制 `control`，publisher 控制运行态和 `verified`。
@@ -455,4 +463,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定一个 DSH campaign 运行期间默认分支出现新提交时，旧维修应如何停止和重新验证。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定维修 PR 尚未合并时 NPM latest 又变化，旧 PR 是关闭重开还是复用为当前 latest。其余已经确认的决定不因后续讨论自动重开。
