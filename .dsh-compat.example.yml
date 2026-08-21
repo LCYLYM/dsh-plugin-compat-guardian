@@ -6,6 +6,14 @@ watch:
   channel: latest
   # 无需额外配置：版本号没变但实际安装内容变化时，会重跑完整兼容测试，但暂不调用维修模型。
 
+runtime:
+  # auto 依次读取 .node-version、.nvmrc、package.json#engines；都没有则使用 Node 24 LTS。
+  node: auto
+  # auto 依次读取 packageManager 和 lockfile；支持 npm/pnpm/yarn，无声明则 npm。
+  package_manager: auto
+  # V1 默认单一 Linux runner，可覆盖成另一个 runner label，但不自动展开 OS matrix。
+  runner: ubuntu-24.04
+
 repair:
   # 以下是产品默认值，仓库可覆盖；campaign 开始后会解析并锁定精确制品。
   dsh_version: "0.1.1-rc.2"
@@ -111,6 +119,8 @@ pricing:
 delivery:
   mode: pull-request # pull-request | auto-merge | direct-push
   branch_prefix: automation/dsh-compat
+  # 默认使用 GITHUB_TOKEN；仅无人值守 auto-merge 需要时才配置此可选 publisher-only Secret。
+  publisher_token_env: DSH_GUARDIAN_PUBLISH_TOKEN
   # 仓库不保存逐版本报告文件；报告放 PR/Issue/Actions Summary，lock 只保存链接。
   # 每个目标最终只发布一个整理后的 bot commit。
 

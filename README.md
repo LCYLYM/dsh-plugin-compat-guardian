@@ -2,7 +2,7 @@
 
 安装在 DeepSeek Harness（DSH）插件仓库中的 GitHub Actions 维修机器人：追踪 NPM `latest`，隔离验证插件，不兼容时用本轮已锁定的 repair DSH 自动修复，再由独立 verifier 复验并产出可合并 PR。
 
-当前阶段：grilling / 设计基线 Draft 0.3。已建立公开真实样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)，但实现已明确冻结；只有用户宣布 grilling 结束并要求开工后，才会安装 Guardian workflow、创建故障场景、配置模型凭据或运行自动维修。
+当前阶段：grilling 决策已收口 / 设计基线 Draft 0.4。已建立公开真实样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)，但实现仍明确冻结；只有用户宣布 grilling 结束并要求开工后，才会安装 Guardian workflow、创建故障场景、配置模型凭据或运行自动维修。
 
 V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目的 reusable workflow/orchestrator。无论仓库是原创插件还是魔改 fork，都只维护当前仓库，不自动同步或联系 upstream。
 
@@ -63,5 +63,9 @@ PR 和报告只保存输入 hash、机械事件、状态、耗时、usage 与脱
 如果 Guardian 判断 smoke contract 本身需要调整，它会停止当前代码维修并另开一个只含 contract/fixture 的人审 PR；不会把改验收标准和改代码混在一起。合并后立即重测，但已经花掉的预算和维修次数不会恢复。`BLOCKED_EXTERNAL` 则更轻：手工运行或提交相关 provider/contract 配置即可再试一次 smoke，无需改 `resetBudget`，也不会重置维修预算。
 
 每个目标最终只发布一个整理后的 bot commit，中间失败尝试放 PR 评论/Issue 和短期 artifact。Actions Summary 每次都有；email、TG、webhook 只在首次等待低价、一次 30% 提醒和最终 `PASS/BLOCKED/SUPERSEDED` 时发送，六小时 `NOOP` 不打扰人。
+
+运行环境默认也保持简单：优先遵循插件仓库自己的 `.node-version`、`.nvmrc`、Node engines 和 package manager 声明；都没有时用 Node 24 LTS + npm。V1 自动识别 npm/pnpm/yarn，遇到冲突 lockfile 或 Bun 明确阻塞；默认单个 `ubuntu-24.04` runner，可覆盖但不自动铺三系统 matrix。
+
+首次安装只需在目标仓库执行 `npx dsh-plugin-compat-guardian onboard`。它在临时区生成并用 `gh` 打开 onboarding PR，没有 `gh` 时留下本地分支和明确命令；不直接写默认分支，也不把 key/base URL 写入 PR。publisher 默认使用仓库 `GITHUB_TOKEN`；无人值守 auto-merge 才可选配置只对 publisher 可见的细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`。
 
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

@@ -46,6 +46,11 @@
 - R44 [open] lock 只保存机器状态和 durable report URL；详细报告必须位于 PR body、campaign Issue 或 Actions Summary，不提交逐版本报告文件。direct-push 的最终 commit message 必须包含目标版本与 campaign Issue URL；surface: lock/PR/Issue/commit；evidence: 三种交付模式的报告回读和仓库零报告文件检查。
 - R45 [open] 每个目标只能发布一个通过 verifier 的整理后 bot commit，包含最终代码与 lock；失败维修轮次只保留在 PR 评论/Issue 和短期 artifacts，contract-change PR 必须独立，禁止把中间失败 commit 推入交付历史；surface: branch/publisher/history；evidence: 两轮维修后的单 commit 历史和独立 contract PR。
 - R46 [open] 每次 run 都生成 Actions Summary；email/TG/webhook 仅对带稳定 event ID 的首次 WAITING_FOR_PRICE、一次 30% 收敛提醒、PASS、BLOCKED、SUPERSEDED 状态变化发送，NOOP 和同状态 rerun 不发送；surface: notifier/dedupe ledger；evidence: 各事件一次投递、rerun/六小时 NOOP 零投递和三 adapter payload 回读。
+- R47 [open] Node 必须依次解析 `.node-version`、`.nvmrc`、`package.json#engines`，无声明时使用 Node 24 LTS，并记录本轮精确版本；互相冲突的声明必须在 onboarding 阻塞而非猜测；surface: runtime resolver/report/verified tuple；evidence: 三种声明、fallback、冲突和精确版本回读。
+- R48 [open] 包管理器必须先读 `packageManager`、再读唯一 lockfile，无声明时默认 npm；V1 支持 npm/pnpm/yarn，冲突 lockfile 或 Bun 必须 `BLOCKED_UNSUPPORTED`，不得切换包管理器；surface: package-manager resolver/install/cache；evidence: 三种支持项、fallback、冲突和 Bun 阻塞测试。
+- R49 [open] 默认 runner 必须为 `ubuntu-24.04`，允许仓库覆盖一个 runner label，并把实际 OS/label 写入 verified tuple；V1 不自动展开 OS matrix；surface: thin/reusable workflow/config/report；evidence: 默认 runner、单覆盖和无 matrix workflow 回读。
+- R50 [open] `npx dsh-plugin-compat-guardian onboard` 必须只在临时区和新分支生成 onboarding 内容，使用本地 provider 环境但不持久化凭据；有已认证 `gh` 时打开 PR，无 `gh` 时保留分支并输出精确命令，绝不能直接写默认分支；surface: CLI/temp DSH_HOME/git/gh；evidence: 有无 gh 两条真实路径、默认分支零 diff 和 secret 扫描。
+- R51 [open] publisher 默认使用仓库 `GITHUB_TOKEN` 并在缺少创建 PR 权限或 checks 等待批准时明确阻塞/等待；无人值守 auto-merge 可选细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`，只允许 publisher job 获得，repair/candidate/verifier 均不可见；V1 不强制额外 token 或 GitHub App；surface: workflow permissions/secrets/publisher；evidence: 默认 PR、等待批准、可选 token auto-merge 和三类非 publisher secret 拒绝。
 
 Current slice: R0 需求与架构设计
 

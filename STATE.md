@@ -1,6 +1,6 @@
 # State
 
-Current slice: R0 grilling 与设计基线 Draft 0.3
+Current slice: R0 grilling 决策收口与设计基线 Draft 0.4
 
 Project stage: technical
 
@@ -45,7 +45,11 @@ Project stage: technical
 - 已确认 lock 只保存机器状态和 report URL，详细报告放 PR/Issue/Actions Summary，不提交逐版本报告文件；direct-push commit 写目标版本与 campaign Issue URL。
 - 已确认每个目标只发布一个整理后的最终 bot commit，中间失败轮次保留在评论/Issue/短期 artifact；contract-change PR 独立。
 - 已确认 Actions Summary 每次生成；email/TG/webhook 只对首次等待低价、一次 30% 提醒和 PASS/BLOCKED/SUPERSEDED 状态变化去重发送，NOOP 不通知。
+- 已确认 Node 优先读取仓库 `.node-version`、`.nvmrc`、engines，无声明默认 Node 24 LTS；包管理器优先 packageManager/唯一 lockfile，V1 支持 npm/pnpm/yarn、默认 npm，冲突或 Bun 明确阻塞。所有精确解析值写入证据。
+- 已确认默认单个 `ubuntu-24.04` runner，可覆盖一个 label，不做默认 OS matrix。
+- 已确认首次安装入口为 `npx dsh-plugin-compat-guardian onboard`：临时目录、新分支、有 `gh` 自动开 onboarding PR、无 `gh` 留分支与命令，不直接写默认分支或持久化本地凭据。
+- 已确认 publisher 默认使用 `GITHUB_TOKEN` 并接受 GitHub 要求人工批准 bot PR checks；真正无人值守 auto-merge 才可选 publisher-only 细粒度 token，V1 不强制额外 token 或 GitHub App。
 
-当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
+当前阶段门：D1–D53 与 R1–R51 已收口，但用户尚未明确结束 grilling。除调研与文档外，仍禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 
-下一步：用少量批次收尾仍会直接影响用户操作的设计。只有用户明确宣布 grilling 结束并要求开工后，才制定并执行实现计划。
+下一步：等待用户明确说“结束 grilling，开始实现”，随后才制定并执行实现计划。

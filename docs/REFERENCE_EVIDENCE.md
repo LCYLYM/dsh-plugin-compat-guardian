@@ -39,6 +39,8 @@ npm view @deepseek-ai/dsh dist-tags version time --json
 
 根包 `@deepseek-ai/dsh@0.1.1-rc.2` 的 integrity 为 `sha512-UP1UIh6q3Gme/yXRn/QL2P8IsVlv8Shpg22TRJIZPsCRWLm4CBiA1MUvXmJAfsOEETBMLAl+xWPtFw6ICsN3wg==`，对大量内部包使用 `^0.1.1-rc.2` 范围。说人话就是：DSH 显示的根版本号可能没变，但今天全新安装到的内部组件与前几天不同。同一次测试会用 package lock 固定依赖；以后的巡检则重新模拟今天的全新安装。实际安装内容变化时，会重跑仓库测试、插件 pack/install、dump-config、真实启动和 smoke 断言；这一步运行 Actions，但还不调用 repair model。已经用过自动维修时，测试失败后仍需用户 reset 才能再次花模型额度。
 
+该根包当前 NPM 元数据没有声明 `engines.node`，所以 Guardian 不能从 DSH 包本身推断唯一 Node 版本。真实 fixture 已在 Node `v24.13.1` 通过 10/10 测试；Node 官方当前把 v24 标为 LTS，并计划维护到 2028 年 4 月。因此仓库无版本声明时采用 Node 24 LTS 是可复验默认，而不是声称它是 DSH 官方最低版本。
+
 ## 3. 视觉模型在当前发布制品中真实存在
 
 本轮同时检查了官方仓库提交 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` 和最新 NPM tarball：
@@ -129,20 +131,26 @@ DeepSeek 当前官方文档明确：
 - reusable workflow 的 secrets 需要调用方显式传递；job/workflow 应使用最小 `permissions`。
 - 跨仓库 reusable workflow 可以引用 SHA、release tag 或 branch；GitHub 明确把 commit SHA 描述为稳定性与安全性最可靠的选择。完整 commit SHA 是当前唯一不可移动的引用方式，因此插件仓库必须用 SHA 固定 Guardian 引擎。
 - 仓库 `GITHUB_TOKEN` 触发的大多数事件不会递归创建新 run，但 `workflow_dispatch`、`repository_dispatch` 等有例外，不能作为唯一防循环门。
+- 仓库设置必须显式允许 GitHub Actions 创建/批准 PR；默认值可能是关闭或继承组织策略。
+- 使用 `GITHUB_TOKEN` 创建的 PR，其 checks 可能需要有写权限的人批准后才运行。GitHub 官方建议需要无人值守触发时使用 GitHub App 或 PAT；V1 不建设 App，只把细粒度 publisher token 作为 auto-merge 的可选项。
 - concurrency 可以取消同组旧 run，但旧进程仍要在发布前再次确认 current latest。
 - scheduled workflow 可能延迟，高负载时可能丢弃；默认分支才是 schedule 定义来源。
 - 公开仓库 60 天无活动时，scheduled workflows 可能自动禁用。
 - GitHub 当前把公共仓库的标准 GitHub-hosted runner 描述为免费且 unlimited；larger runner、私有仓库、存储、并发和使用政策另算。“不限计费分钟”仍不等于产品可以不设墙钟和循环上限。
+- GitHub 当前提供稳定的 `ubuntu-24.04` 标准 runner；`setup-node` 原生覆盖 npm、pnpm、yarn 缓存路径。V1 因此固定 Ubuntu 24.04 且只实现这三类包管理器，避免把可变 `ubuntu-latest`、Bun 和 OS matrix 同时引入基线。
 
 官方来源：
 
 - [Reusable workflows](https://docs.github.com/en/actions/how-tos/sharing-automations/reusing-workflows)
 - [Secure use reference：pin full-length commit SHA](https://docs.github.com/en/actions/reference/security/secure-use)
 - [Workflow permissions 与 `GITHUB_TOKEN`](https://docs.github.com/en/actions/concepts/security/github_token)
+- [仓库 Actions 设置：允许创建 PR](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)
 - [Workflow concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 - [Events that trigger workflows：schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)
 - [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 - [Choosing the runner for a job](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)
+- [Dependency caching：setup-node 支持 npm/pnpm/yarn](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching)
+- [Node.js release schedule](https://nodejs.org/en/about/previous-releases)
 
 ## 8. 首个真实样本仓库
 

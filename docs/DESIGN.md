@@ -1,6 +1,6 @@
 # DSH Plugin Compatibility Guardian：产品与技术设计
 
-状态：Draft 0.3
+状态：Draft 0.4，grilling 决策已收口，尚未授权实现
 
 日期：2026-08-21
 
@@ -88,6 +88,11 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D46 | lock 只保存机器状态和 report URL；详细人类报告放 PR body、campaign Issue 或 Actions Summary。PR 模式不另建报告文件；direct-push 的最终 commit 写目标版本和 campaign Issue URL。 |
 | D47 | 每个目标只发布一个整理后的最终 bot commit，包含通过 verifier 的代码与 lock。失败轮次只保留在 PR 评论/Issue 和短期 artifacts，不把中间坏 commit 推进交付历史；contract-change PR 独立提交。 |
 | D48 | Actions Summary 每次运行都生成；email/TG/webhook 只发送去重后的状态变化：首次 `WAITING_FOR_PRICE`、一次 30% 收敛提醒、`PASS`、`BLOCKED`、`SUPERSEDED`。六小时 `NOOP` 不发外部通知。 |
+| D49 | Node 先按 `.node-version`、`.nvmrc`、`package.json#engines` 识别并记录本轮精确值；仓库未声明时默认 Node 24 LTS。相互冲突的声明在 onboarding 阶段阻塞，不静默猜测。 |
+| D50 | 包管理器先读 `packageManager`，再读唯一 lockfile；V1 支持 npm、pnpm、yarn，无声明默认 npm。冲突 lockfile 或 Bun 仓库明确 `BLOCKED_UNSUPPORTED`，不偷偷切换包管理器。 |
+| D51 | 默认 runner 固定 `ubuntu-24.04`，允许仓库覆盖一个 runner label；V1 不自动运行 Linux/macOS/Windows matrix。实际 runner/OS 进入 verified tuple。 |
+| D52 | 首次安装入口为目标仓库内一次 `npx dsh-plugin-compat-guardian onboard`：在临时区运行、创建本地分支并用已登录 `gh` 打开 onboarding PR；没有 `gh` 时保留分支并打印明确命令。它不直接改默认分支，后续全部由 Actions 运行。 |
+| D53 | publisher 默认使用仓库 `GITHUB_TOKEN`，要求用户开启 Actions 创建 PR 权限；GitHub 要求人审 bot PR checks 时就等待。只有需要真正无人值守 auto-merge 时才可选细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`，且只注入 publisher job；V1 不建设 GitHub App，也不强制额外 token。 |
 
 ## 4. 最小架构
 
@@ -111,6 +116,8 @@ flowchart LR
 2. Guardian 的 versioned reusable workflow/orchestrator。
 
 不增加中央数据库、常驻 gateway、upstream 同步器或独立通知服务。状态由 Git 历史、`.dsh-compat.lock.json`、Actions run、PR/Issue 和短期 artifacts 共同承载。
+
+运行环境也只保留一层自动识别：Node 依次读取 `.node-version`、`.nvmrc`、`package.json#engines`，没有声明才用 Node 24 LTS；包管理器依次读取 `packageManager` 与唯一 lockfile，没有声明才用 npm。每轮记录解析出的精确 Node、包管理器版本与 runner。V1 默认 `ubuntu-24.04` 单 runner，不另造 OS matrix 调度器。
 
 ## 5. 目标解析与 latest 收敛
 
@@ -202,6 +209,16 @@ stateDiagram-v2
 10. 手工运行或相关 provider/contract 配置提交只允许 `BLOCKED_EXTERNAL` 再做一次 smoke，不重置维修预算或次数。
 
 ## 7. Onboarding：只审核一次什么
+
+首次安装在目标仓库 clone 中执行：
+
+```bash
+npx dsh-plugin-compat-guardian onboard
+```
+
+该命令只在临时目录和新分支工作，使用本地环境中已有的 DSH provider 配置做 smoke discovery，绝不把 key/base URL 值写入文件、日志或 PR。已登录 `gh` 时自动打开 onboarding PR；没有 `gh` 时保留生成分支并输出可复制的 push/PR 命令。NPM 名称是当前设计名称，发布前仍需实际发布回读，不能因为 2026-08-21 查询为空就声称已经占有。
+
+installer 会检查仓库所需 Secret 是否存在，但读不到也不回显值；缺少时只给出一次性的 `gh secret set DEEPSEEK_API_KEY`、可选 base/search URL 和通知 Secret 指引。用户可以先合并无模型 contract，缺 key 的真实模型 smoke 会按既有规则 `BLOCKED`，不会伪造 PASS。onboarding PR 合并后，日常探测、维修和交付全部在 GitHub Actions 内运行，不要求本地常驻进程。
 
 首次安装会生成 onboarding PR，内容限定为：
 
@@ -463,6 +480,7 @@ cost = cache_hit_input * hit_rate
 ## 16. GitHub Actions 边界
 
 - reusable workflow 的 secrets 必须显式传入；默认 job 使用 read-only `GITHUB_TOKEN`。
+- publisher 默认使用仓库 `GITHUB_TOKEN`，调用仓库需在 Actions 设置中允许创建 PR。若 GitHub 对 bot PR 的 checks 要求人点击批准，则状态保持 `WAITING_FOR_GITHUB_APPROVAL`，不绕过。需要无人值守 auto-merge 时可选细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`；它只进入 publisher job，repair/candidate/verifier 都不可见。
 - 外部 Guardian reusable workflow 必须锁完整 commit SHA，不能引用可移动的 `main`/`v1`。该 SHA 只固定 Guardian 引擎，candidate DSH 仍在运行时解析 NPM latest；V1 不增加 Guardian 自更新检查或自动更新 PR。
 - candidate/verifier job 与 publisher job 分权；不让不可信 artifact 直接变成有权限脚本。
 - 使用 concurrency、job timeout 和确定分支；GitHub 自带的 `GITHUB_TOKEN` 防递归规则只是第二道防线。
@@ -481,6 +499,8 @@ V1 不做：
 - 独立通知 gateway 服务；
 - 自动修改兼容 contract 以换取 PASS；
 - Guardian 自升级检测、自动更新 workflow PR，或随每个 DSH 版本改写 Guardian SHA；
+- Bun 仓库适配或默认多操作系统 matrix；
+- 强制额外 publisher token 或 GitHub App；
 - 绕过 branch protection、secret policy 或 verifier。
 
 ## 18. 实现顺序
@@ -489,7 +509,7 @@ V1 不做：
 
 首个样本已确定为公开独立仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)。它从正式仓库 `LCYLYM/dsh-attachments@028dc1f` 全新复制，保留真实 Web client、Host patch、安装器与 10 项测试，但设为 `private: true` 防止误发 NPM，并明确标为自动维修测试副本。
 
-M0 在该仓库生成 onboarding PR，用固定 candidate 打通 fresh `DSH_HOME`、pack/add/dump/start/插件专属断言/remove/report，先不调用维修模型。
+M0 先实现 `npx dsh-plugin-compat-guardian onboard`，在该仓库生成 onboarding PR，再用固定 candidate 打通 fresh `DSH_HOME`、pack/add/dump/start/插件专属断言/remove/report，先不调用维修模型。
 
 M0 分成两个清楚的验收阶段：
 
@@ -510,6 +530,6 @@ M0 分成两个清楚的验收阶段：
 
 接入 DeepSeek usage 去重、人民币价格快照、搜索调用计数、30% steer、基于可见 usage 的 hard stop、PR/auto-merge/direct-push 和通知适配器。
 
-## 19. 待继续 grill
+## 19. Grilling 收口与实现门
 
-下一轮只收尾运行环境、包管理器识别、安装入口和首次 secret 配置这几项直接影响用户使用的决定。其余已经确认的决定不因后续讨论自动重开。
+D1–D53 已覆盖 V1 的产品范围、基线、验证、维修、预算、权限、交付、通知、运行环境与安装入口；当前没有必须继续增加的设计问题。为避免“边讨论边写代码”造成漂移，项目仍保持设计冻结：只有用户明确说“结束 grilling，开始实现”后，才把 R1–R51 拆成实现计划并修改运行时代码、workflow、fixture 或 Secret。
