@@ -36,7 +36,7 @@ repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider
 
 本项目只修“DSH 更新后插件不兼容”这一件事。它不是通用依赖升级机器人、CI 修复机器人或代码整理机器人；测试、预算、通知和交付功能都必须直接服务于发现、证明、修好并交付 DSH 兼容修复。
 
-默认每 6 小时检查一次 NPM `latest` 和实际安装图，也支持手工立即检查；默认分支中的 Guardian 配置或 lock 变化会触发一次处理，普通源码 push 不会。GitHub cron 只是唤醒器，即使延迟或错过中间版本，醒来后也直接处理当时的最新版本。
+默认每 6 小时检查一次 NPM `latest` 和实际安装图，也支持手工立即检查；默认分支中的 Guardian 配置、lock 或已审核 smoke contract 变化会触发一次处理，普通插件源码 push 不会。GitHub cron 只是唤醒器，即使延迟或错过中间版本，醒来后也直接处理当时的最新版本。
 
 首次 onboarding 还没有历史兼容记录时，先用本轮锁定的 repair DSH（默认 rc.2）跑完整验收。通过后它才成为第一份 `verified`，然后继续检查当前 latest；如果它自己都失败，只报告 `ONBOARDING_BLOCKED`，不调用模型把仓库原有问题当成 DSH 更新问题，也不增加另一项 baseline 配置。
 
@@ -46,7 +46,7 @@ repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider
 
 插件里的薄 workflow 使用完整 commit SHA 固定 Guardian 引擎，旁边标注版本；DSH 更新不会改这行。V1 不检查 Guardian 自身更新，也不创建 Guardian 更新 PR。以后确实需要升级 Guardian 时，用户手工替换这一行 SHA 或重新运行安装即可。
 
-DSH 新版直接通过、无需修代码时，也会提交精确 verified lock 和简短报告，避免六小时后重复测试。默认是只改这两项的小 PR；开启 auto-merge 或 direct-push 后按对应模式自动落库，插件代码保持不变。
+DSH 新版直接通过、无需修代码时，也会提交精确 verified lock，避免六小时后重复测试。简短报告放在 PR、campaign Issue 或 Actions Summary，lock 保存链接，不在仓库堆逐版本报告文件；开启 auto-merge 或 direct-push 后按对应模式自动落库，插件代码保持不变。
 
 默认每个目标版本最多使用 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和 2 轮维修，任一上限先到就停止；剩余 30% 时默认只提醒 DSH 收敛一次。等待低价窗口不计入 60 分钟，所有数值都可由仓库覆盖。
 
@@ -59,5 +59,9 @@ repair DSH 默认可以按需使用 DeepSeek 官方搜索，提示词会建议�
 模型 smoke 默认只测新 DSH，沿用“插件当前本来就是好的”这一实用假设；用户可在 onboarding contract 选择旧版和新版各测一次。发生修复后必须在新 DSH 上复测，完全相同的快照会去重。fixture 默认使用已审核固定文件，也可允许 DSH 在隔离区自行寻找、生成或下载公开文件；一旦选中，本 campaign 内就冻结同一份内容。timeout、429 或 provider 5xx 只立即重试一次，再失败就标记 `BLOCKED_EXTERNAL`，等待手工运行、相关配置变化或新 DSH 版本，不让六小时定时任务循环烧调用。
 
 PR 和报告只保存输入 hash、机械事件、状态、耗时、usage 与脱敏错误；失败的脱敏 Actions artifact 保留 7 天。key、认证头、完整请求和完整模型对话都不持久化。
+
+如果 Guardian 判断 smoke contract 本身需要调整，它会停止当前代码维修并另开一个只含 contract/fixture 的人审 PR；不会把改验收标准和改代码混在一起。合并后立即重测，但已经花掉的预算和维修次数不会恢复。`BLOCKED_EXTERNAL` 则更轻：手工运行或提交相关 provider/contract 配置即可再试一次 smoke，无需改 `resetBudget`，也不会重置维修预算。
+
+每个目标最终只发布一个整理后的 bot commit，中间失败尝试放 PR 评论/Issue 和短期 artifact。Actions Summary 每次都有；email、TG、webhook 只在首次等待低价、一次 30% 提醒和最终 `PASS/BLOCKED/SUPERSEDED` 时发送，六小时 `NOOP` 不打扰人。
 
 设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。

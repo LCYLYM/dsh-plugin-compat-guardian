@@ -26,12 +26,12 @@ Project stage: technical
 - 已确认不设置改动文件数或增删行数的硬上限；报告只记录这些数据供人判断。防失控继续使用已有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier，不增加新配置。
 - 已确认模型 secret 只在可信默认分支 SHA 的定时、手工或默认分支 push campaign 中使用；已审核 contract 要求的 candidate 固定 smoke 可临时注入一次，repair DSH 必须等无 key 检查确认不兼容后才注入。普通/fork PR、检出 PR 的 pull_request_target 和任意 ref 均不可获得，publisher Git 写权限继续隔离。
 - 已再次收紧产品范围：只维护 DSH 更新造成的插件兼容性。无关依赖升级、普通 CI 修复、代码质量整理和通用仓库维护不进入自动维修；其他能力只有确实支撑探测、验证、修复、交付和报告时才加入。
-- 已确认默认每 6 小时检查一次 NPM latest 和实际安装图，支持手工立即检查，并在默认分支 Guardian 配置/lock 变化时触发；普通源码 push 不触发。cron 只负责唤醒，延迟或跨过中间版本时直接收敛到当时 latest。
+- 已确认默认每 6 小时检查一次 NPM latest 和实际安装图，支持手工立即检查，并在默认分支 Guardian 配置、lock 或已审核 smoke contract 变化时触发；普通插件源码 push 不触发。cron 只负责唤醒，延迟或跨过中间版本时直接收敛到当时 latest。
 - 已确认 onboarding 没有历史 verified 时，直接用本轮解析并冻结的 repair DSH（默认 rc.2）跑完整 gate 建立第一份基线；通过后才测试当前 latest，失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。
 - 已确认 campaign 锁定启动时的默认分支 commit；发布前分支变化就将旧 attempt 标为 `STALE_SOURCE` 并禁止发布，下一次只先对新 commit 无模型复测。此前未调用模型则保留那一次维修机会，已经调用则源码变化不重置预算，仍需 reset 才能再次调模型。
 - 已确认一目标版本一维修 PR；PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 后自动关闭并保留历史，新目标从当前默认分支重新验证、必要时另开 PR，不 force-push 或复用旧 PR。
 - 已确认插件薄 workflow 用完整 commit SHA 固定 Guardian 引擎并注释版本，不使用可移动 main/v1；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA，未来确需升级时由用户手工改一行或重跑安装。
-- 已确认 candidate 直接 PASS、无需修代码时仍提交 verified lock 和简短报告，以便下次可靠去重；默认小 PR，auto-merge/direct-push 开启时按对应模式交付，不改插件代码，也不增加另一套状态存储。
+- 已确认 candidate 直接 PASS、无需修代码时仍提交 verified lock，以便下次可靠去重；简短报告放 PR/Issue/Actions Summary 并由 lock 保存 URL，不提交逐版本报告文件。默认小 PR，auto-merge/direct-push 开启时按对应模式交付，不改插件代码。
 - 已确认默认 campaign 上限为 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和最多 2 轮维修，任一先到即停；剩余 30% 时默认只发一次收敛消息，等待低价窗口不计入 60 分钟。全部数值可覆盖。
 - 已确认 repair DSH 默认允许使用 DeepSeek 官方搜索但不要求每轮都搜；提示词建议查官方标准、文档、源码和 NPM 元数据作辅助。Guardian 不设搜索专属次数/uses 上限，失败只记录并继续本地诊断，不换模型、不代替 verifier；整体 60 分钟和 provider 限制仍有效。
 - 已确认 candidate 默认不调用模型；只有 onboarding 已审核 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 跑一次固定真实回合。usage 计入同一版本预算，缺 key 为 `BLOCKED`；V1 删除 `ephemeral-proxy` 方案，并明确 candidate 在该 step 内能接触 key 的风险。
@@ -40,7 +40,12 @@ Project stage: technical
 - 已确认模型 smoke 外部错误只立即重试一次，再失败进入 `BLOCKED_EXTERNAL`，不维修、不由六小时 schedule 循环重试，等待手工运行、相关配置变化或新目标版本。
 - 已确认 fixture 默认使用已审核固定文件，也可允许 DSH 在隔离区自行寻找、生成或下载公开文件；选择后冻结实际内容/来源/hash，整个 campaign 比较与复测不得更换。
 - 已确认模型 smoke 的 commit/PR/report 只保存机械元数据和脱敏错误；失败脱敏 artifact 保留 7 天，不持久化 key、认证头、完整请求或完整模型对话。
+- 已确认 contract 本身需要改变时结束当前维修为 `BLOCKED_CONTRACT`，自动另开只含 contract/fixture 的人审 PR；合并后立即完整复测，但不恢复已消耗的预算、attempt 或自动维修机会，也不与代码修复混合。
+- 已确认手工运行或相关 provider/contract 配置提交可让 `BLOCKED_EXTERNAL` 再试一次 smoke，无需 `resetBudget`；这不重置维修消耗，新目标版本才使用新 campaign。
+- 已确认 lock 只保存机器状态和 report URL，详细报告放 PR/Issue/Actions Summary，不提交逐版本报告文件；direct-push commit 写目标版本与 campaign Issue URL。
+- 已确认每个目标只发布一个整理后的最终 bot commit，中间失败轮次保留在评论/Issue/短期 artifact；contract-change PR 独立。
+- 已确认 Actions Summary 每次生成；email/TG/webhook 只对首次等待低价、一次 30% 提醒和 PASS/BLOCKED/SUPERSEDED 状态变化去重发送，NOOP 不通知。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 
-下一步：继续一次一问完成剩余设计。只有用户明确宣布 grilling 结束并要求开工后，才制定并执行实现计划。
+下一步：用少量批次收尾仍会直接影响用户操作的设计。只有用户明确宣布 grilling 结束并要求开工后，才制定并执行实现计划。

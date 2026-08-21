@@ -111,8 +111,12 @@ pricing:
 delivery:
   mode: pull-request # pull-request | auto-merge | direct-push
   branch_prefix: automation/dsh-compat
+  # 仓库不保存逐版本报告文件；报告放 PR/Issue/Actions Summary，lock 只保存链接。
+  # 每个目标最终只发布一个整理后的 bot commit。
 
 notifications:
+  # Summary 每次运行都有；外部渠道只发送去重后的状态变化，不发送 NOOP。
+  # direct-push 会固定使用 campaign Issue 承载详细报告，不由本开关关闭。
   github_summary: true
   github_issue_on_blocked: true
   email: false

@@ -68,12 +68,12 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
 | D27 | 模型 Secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign；D37 的已审核 candidate 固定 smoke 可在兼容结论前获得一次，repair DSH 则只在无 key 检查确认失败后获得。PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 都不得获得它。 |
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
-| D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置/lock 变更触发；普通源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
+| D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置、lock 或已审核 smoke contract 变更触发；普通插件源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
 | D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
 | D31 | campaign 锁定启动时的默认分支 commit。发布前若分支已前进，旧 attempt 进入 `STALE_SOURCE` 且不得发布；下一次只先对新 commit 做无模型复测。此前未调用模型则保留唯一维修机会，已经调用则必须 reset 才能再次调模型。 |
 | D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
 | D33 | 插件 workflow 用完整 commit SHA 引用 Guardian reusable workflow，并注释人类可读版本；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA；以后确需升级时由用户手工改一行或重跑安装。 |
-| D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock 与简短报告，避免下次重复测试；交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码，也不增加 Issue-only 状态源。 |
+| D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock，避免下次重复测试；简短报告放 PR/Issue/Actions Summary，lock 保存其 URL，不在仓库增加逐版本报告文件。交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码。 |
 | D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
 | D36 | DeepSeek 官方搜索默认允许且由 repair DSH 按需使用；默认提示词建议把官方标准、文档和源码作为辅助证据。Guardian 不设置搜索次数/uses 专属上限，搜索仍受整体 60 分钟运行边界和 provider 自身限制。 |
 | D37 | candidate 默认不调用模型。只有 onboarding 已审核的 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 执行一次固定真实回合；usage 计入同一 campaign，缺 key 为 `BLOCKED`。V1 不建设 ephemeral proxy。 |
@@ -83,6 +83,11 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D41 | 真实模型 smoke 遇到 timeout、429 或 provider 5xx 时只立即重试一次；仍失败则为 `BLOCKED_EXTERNAL`，不启动 repair，也不由六小时 schedule 反复重试。手工运行、相关配置变更或新目标版本才是下一次信号。 |
 | D42 | 模型 smoke fixture 默认 `fixed`，使用 onboarding 已审核文件；可选 `agent-selected`，允许 DSH 在隔离 smoke 工作区中自行寻找、生成或下载公开文件。选定后的实际字节/URL/hash 在本 campaign 内冻结，差分或 repair 复测必须复用。 |
 | D43 | commit/PR/report 只持久化输入 hash、事件类型、请求中附件/图片存在性、状态、耗时、usage 和脱敏错误；失败可保留 7 天脱敏 Actions artifact。不得持久化 key、认证头、原始完整请求或完整模型对话。 |
+| D44 | Guardian 判断已审核 smoke contract 本身需要改变时，当前维修结束为 `BLOCKED_CONTRACT`，并自动创建独立 contract-change PR；该 PR 只含 contract/fixture 和解释，永远人工审核，不受 auto-merge/direct-push。合并后立即完整复测，但不重置已消耗预算或维修次数。 |
+| D45 | `BLOCKED_EXTERNAL` 可由手工运行或相关 provider/contract 配置提交恢复一次 smoke，不要求 `resetBudget`；这只清除外部阻塞，不重置 repair budget、attempt 或 `automaticRepairUsed`。新目标版本自然进入新 campaign。 |
+| D46 | lock 只保存机器状态和 report URL；详细人类报告放 PR body、campaign Issue 或 Actions Summary。PR 模式不另建报告文件；direct-push 的最终 commit 写目标版本和 campaign Issue URL。 |
+| D47 | 每个目标只发布一个整理后的最终 bot commit，包含通过 verifier 的代码与 lock。失败轮次只保留在 PR 评论/Issue 和短期 artifacts，不把中间坏 commit 推进交付历史；contract-change PR 独立提交。 |
+| D48 | Actions Summary 每次运行都生成；email/TG/webhook 只发送去重后的状态变化：首次 `WAITING_FOR_PRICE`、一次 30% 收敛提醒、`PASS`、`BLOCKED`、`SUPERSEDED`。六小时 `NOOP` 不发外部通知。 |
 
 ## 4. 最小架构
 
@@ -194,6 +199,7 @@ stateDiagram-v2
 7. 新 `latest` 会使旧任务 `SUPERSEDED`，旧任务不能迟到发布。
 8. 默认分支源码变化只允许下一次无模型复测，不重置预算或 `automaticRepairUsed`；此前已经调用过模型时，同版本仍需额度增加或有效 reset 边沿才能再次维修。
 9. 模型 smoke 的 timeout、429、provider 5xx 只立即重试一次；再次失败即冻结为 `BLOCKED_EXTERNAL`，schedule 不得循环调用。
+10. 手工运行或相关 provider/contract 配置提交只允许 `BLOCKED_EXTERNAL` 再做一次 smoke，不重置维修预算或次数。
 
 ## 7. Onboarding：只审核一次什么
 
@@ -211,7 +217,7 @@ DSH 默认从 `package.json`/manifest、源码入口、README、已有 test/buil
 安装后必须打开 /plugins/acme/client.js，并在真实页面点击命令面板，断言插件命令可执行。
 ```
 
-用户审核的不是一段泛化提示词，而是随后每次维修都会执行的确定性断言。维修中若发现 contract 本身需变更，只能另开 `CONTRACT_CHANGE_REQUIRED` PR；不能把“改测试让它过”混进兼容修复。
+用户审核的不是一段泛化提示词，而是随后每次维修都会执行的确定性断言。维修中若 Guardian 判断 contract 本身需变更，当前代码维修结束为 `BLOCKED_CONTRACT`，并自动另开 contract-change PR；不能把“改测试让它过”混进兼容修复。该 PR 只包含 contract/fixture 与原因说明，永远需要人工审核，不受仓库 auto-merge/direct-push 设置影响。合并后立即从完整 gate 重跑当前目标，但沿用原 campaign 已消耗的预算、attempt 和 `automaticRepairUsed`。
 
 默认 contract 不调用模型。只有插件能力确实无法通过本地事件、页面、CLI 或 API 证明时，onboarding PR 才可在 contract 中写入 `requires_model_turn: true`，同时声明输入策略、预期机械断言和 fixture 策略。用户合并这份 contract 就表示同意后续 candidate 验证在单独 smoke step 临时使用仓库配置的同一套 provider/model/Secret；这不是每次版本更新都要再次授权的新开关。
 
@@ -387,7 +393,7 @@ cost = cache_hit_input * hit_rate
 6. 等待期间若 `latest` 变化，旧目标 `SUPERSEDED`，直接合并到新目标。
 7. `workflow_dispatch` 可显式选择立即执行；报告必须标记这次价格窗口 override。
 
-除定时和手工检查外，只在默认分支的 Guardian 配置或 `.dsh-compat.lock.json` 变化时触发，用于采用新配置或消费 `resetBudget` 边沿。普通插件源码 push 不额外运行 Guardian；下一次六小时唤醒会基于最新默认分支 SHA 检查。
+除定时和手工检查外，只在默认分支的 Guardian 配置、`.dsh-compat.lock.json` 或已审核 smoke contract 变化时触发，用于采用新配置、消费 `resetBudget` 边沿或复验 contract-change PR。普通插件源码 push 不额外运行 Guardian；下一次六小时唤醒会基于最新默认分支 SHA 检查。
 
 ## 14. 最小 lock 与一次性 reset
 
@@ -432,6 +438,7 @@ cost = cache_hit_input * hit_rate
 - 再次 reset 需要新的 `N -> Y` 边沿；用户也可以只提高配置上限，此时保留原 consumed 并获得新增余量。
 - repair agent 不能编辑 lock；用户控制 `control`，publisher 控制运行态和 `verified`。
 - `automaticRepairUsed` 只回答“这个根版本是否已经花过一次自动维修机会”；内部组件变化不会把它偷偷改回 `false`。
+- `BLOCKED_EXTERNAL` 的手工运行或相关 provider/contract 配置提交只清除外部阻塞并开放一次 smoke；不改变 consumed、budget epoch、attempt 或 `automaticRepairUsed`，因此不需要也不能冒充 `resetBudget`。
 
 ## 15. 交付与通知
 
@@ -443,13 +450,15 @@ cost = cache_hit_input * hit_rate
 | `auto-merge` | 否 | PR 的 required checks 通过后请求 GitHub 自动合并。 |
 | `direct-push` | 否 | verifier PASS 后直接更新默认分支；branch protection 拒绝则 BLOCKED。 |
 
-无代码改动仍更新 lock 和窄报告，提交“已验证支持目标版本”，这样下一次轮询能从 Git 历史和 lock 去重。默认创建只含这两项的小 PR；开启 auto-merge 时自动合并，开启 direct-push 时直接提交。三种方式都不改插件代码，也不另造 Issue-only 状态源。有修复时，代码、必要测试、lock 和报告进入同一次交付。
+无代码改动仍更新 lock 并提交“已验证支持目标版本”，这样下一次轮询能从 Git 历史和 lock 去重。默认创建只含 lock 的小 PR，详细报告放 PR body/Actions Summary；开启 auto-merge 时自动合并。direct-push 时详细报告写入按 campaign 去重的 Issue，最终 commit message 包含目标版本和 Issue URL。lock 的 `verified.report` 保存对应 PR、Issue 或 Actions URL，不增加逐版本 Markdown 报告文件。有修复时，最终代码、必要测试和 lock 进入同一个整理后的 commit。
+
+每个目标只发布一个最终 bot commit；两轮维修的中间 diff、失败签名和 verifier 输出留在 PR 评论/Issue 与短期 artifact，不把未通过的中间 commit 推进交付历史。contract-change PR 是单独的人审提交，不能与兼容代码修复混成一个 commit。
 
 失败只创建或更新一个按 campaign key 去重的 Issue/草稿报告，包含最小复现、失败 gate、尝试、预算、当前 diff 和人工接手点，不制造“已兼容”提交。
 
 模型 smoke 的持久化证据保持最小：commit、PR、Issue 和长期报告只记录输入 hash/来源、事件类型、请求中声明附件或图片是否存在、状态、耗时、usage 与脱敏错误。失败时另存一份脱敏 Actions artifact，保留 7 天供排障；原始 key、认证头、完整请求和完整模型对话不进入 commit、日志或 artifact。`agent-selected` fixture 只在 campaign 临时区作为复测输入，报告持久化其来源与 hash，不把下载内容自动提交到插件仓库。
 
-通知顺序为：GitHub Summary/Issue；然后按配置分发 email、Telegram 或通用 webhook。适配器只接收去敏结构化事件 `PASS | BLOCKED | SUPERSEDED`，不接收 key、原始 transcript 或完整环境变量。
+通知顺序为：每次运行都写 GitHub Actions Summary；需要长期记录或 direct-push 报告时更新按 campaign 去重的 Issue；然后按配置分发 email、Telegram 或通用 webhook。外部适配器只接收去敏且带稳定 event ID 的状态变化：首次 `WAITING_FOR_PRICE`、一次 30% 收敛提醒、`PASS`、`BLOCKED`、`SUPERSEDED`。六小时 `NOOP` 和同状态 rerun 不发送，不接收 key、原始 transcript 或完整环境变量。
 
 ## 16. GitHub Actions 边界
 
@@ -503,4 +512,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一轮批量确定 onboarding contract 变更、外部阻塞恢复、修复 PR 报告和通知去重的剩余边界。其余已经确认的决定不因后续讨论自动重开。
+下一轮只收尾运行环境、包管理器识别、安装入口和首次 secret 配置这几项直接影响用户使用的决定。其余已经确认的决定不因后续讨论自动重开。
