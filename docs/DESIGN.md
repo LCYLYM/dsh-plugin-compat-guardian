@@ -74,6 +74,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
 | D33 | 插件 workflow 用完整 commit SHA 引用 Guardian reusable workflow，并注释人类可读版本；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA；以后确需升级时由用户手工改一行或重跑安装。 |
 | D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock 与简短报告，避免下次重复测试；交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码，也不增加 Issue-only 状态源。 |
+| D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
 
 ## 4. 最小架构
 
@@ -311,6 +312,8 @@ hard stop = token / CNY / wall time / attempt 任一启用上限耗尽
 steer     = 任一主要预算剩余比例 <= 30%，且本 campaign 尚未发送过
 ```
 
+可覆盖默认值为 `max_tokens=1000000`、`max_cny=10`、`max_wall_minutes=60`、`max_attempts=2`。墙钟只累计实际执行 repair 与 verifier 的时间；跨 run 等待低价窗口的 `WAITING_FOR_PRICE` 不计时，否则一次正常峰谷等待就会把预算耗尽。任一启用上限先到都拒绝下一次模型请求或 repair attempt；已经发出的单次请求仍可能产生少量尾差。
+
 MVP 累计 DSH/DeepSeek 已经暴露的 token usage，包括主 repair session、子 agent、压缩和重试。独立 DeepSeek 搜索目前不暴露 usage，因此只记录调用次数、所选模型和结果状态，不为这点小额误差另造计费通道。
 
 人民币按带 revision 的 provider/model/tariff 快照估算：
@@ -469,4 +472,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. 待继续 grill
 
-下一项是确定 token、人民币、墙钟和维修轮次的默认预算数字。其余已经确认的决定不因后续讨论自动重开。
+下一项是确定 DeepSeek 联网搜索默认是否开启，以及什么情况下才允许 repair DSH 调用。其余已经确认的决定不因后续讨论自动重开。

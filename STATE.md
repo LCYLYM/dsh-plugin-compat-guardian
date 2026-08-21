@@ -32,6 +32,7 @@ Project stage: technical
 - 已确认一目标版本一维修 PR；PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 后自动关闭并保留历史，新目标从当前默认分支重新验证、必要时另开 PR，不 force-push 或复用旧 PR。
 - 已确认插件薄 workflow 用完整 commit SHA 固定 Guardian 引擎并注释版本，不使用可移动 main/v1；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA，未来确需升级时由用户手工改一行或重跑安装。
 - 已确认 candidate 直接 PASS、无需修代码时仍提交 verified lock 和简短报告，以便下次可靠去重；默认小 PR，auto-merge/direct-push 开启时按对应模式交付，不改插件代码，也不增加另一套状态存储。
+- 已确认默认 campaign 上限为 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和最多 2 轮维修，任一先到即停；剩余 30% 时默认只发一次收敛消息，等待低价窗口不计入 60 分钟。全部数值可覆盖。
 
 当前阶段门：用户明确要求继续 grilling。除调研与文档外，禁止安装 workflow、创建故障分支、配置 secret、调用模型或运行 Guardian；这不是技术阻塞，而是有意冻结实现。
 

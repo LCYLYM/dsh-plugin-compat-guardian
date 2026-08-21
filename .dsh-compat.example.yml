@@ -75,6 +75,7 @@ budget:
   # 不额外实现 OpenAI-compatible 账单解析器。
   max_tokens: 1000000
   max_cny: 10
+  # 只累计实际 repair/verifier 运行；WAITING_FOR_PRICE 不计入。
   max_wall_minutes: 60
   converge_remaining_ratio: 0.30
   converge_message_enabled: true
