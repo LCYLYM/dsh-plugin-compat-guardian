@@ -1,0 +1,79 @@
+schema: 1
+
+watch:
+  registry: https://registry.npmjs.org
+  package: "@deepseek-ai/dsh"
+  channels:
+    - latest
+  schedule: "17 */6 * * *"
+
+runner:
+  # 必须换成该仓库单独验收过的稳定版本；禁止使用 latest。
+  dsh_version: CHANGE_ME_KNOWN_GOOD_VERSION
+  provider: deepseek-official
+  model: deepseek-v4-flash
+  base_url_secret: DSH_BASE_URL
+  api_key_secret: DSH_API_KEY
+
+plugin:
+  workspace: .
+  package_json: package.json
+  profile: web
+  install_from: npm-pack
+  surface: web
+
+security:
+  # disabled | ephemeral-proxy。默认禁止把 repair runner 的长期 key 传给 candidate。
+  candidate_model_access: disabled
+  candidate_base_url_secret: DSH_CANDIDATE_BASE_URL
+  candidate_ephemeral_key_secret: DSH_CANDIDATE_EPHEMERAL_KEY
+
+gates:
+  repository:
+    - npm test
+    - npm pack --dry-run
+  # 该命令必须消费 Guardian 注入的真实 DSH_VERSION/DSH_HOME/DSH_WEB_URL。
+  consumer:
+    - npm run test:compat:dsh
+  require_install_remove_roundtrip: true
+  require_dump_config: true
+  require_real_web_boot: true
+
+repair:
+  max_attempts: 2
+  allowed_paths:
+    - lib/**
+    - src/**
+    - test/**
+    - tests/**
+    - docs/**
+    - package.json
+    - package-lock.json
+    - pnpm-lock.yaml
+  denied_paths:
+    - .github/**
+    - .dsh-compat.yml
+    - compatibility/**
+
+budget:
+  max_tokens: 1000000
+  # 启用人民币上限前必须填写下面的精确 provider/model 价格。
+  max_cny: 10
+  max_wall_minutes: 60
+  converge_remaining_ratio: 0.30
+  converge_message_enabled: true
+
+pricing:
+  revision: CHANGE_ME_PRICE_REVISION
+  unit: cny_per_million_tokens
+  routes:
+    deepseek-official/deepseek-v4-flash:
+      input: CHANGE_ME
+      cache_read: CHANGE_ME
+      cache_write: CHANGE_ME
+      output: CHANGE_ME
+
+delivery:
+  mode: pull-request
+  branch_prefix: automation/dsh-compat
+  auto_merge: false
