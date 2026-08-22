@@ -1,15 +1,15 @@
 schema: 1
 
-# M2 MVP 实际执行 watch/runtime/gates、固定 repair DSH/provider/model、保护路径、
-# token/CNY/墙钟交付门和 pull-request 发布。start_policy、30% steer、max_attempts > 1、
-# auto-merge/direct-push、notifications 与 candidate model smoke 是已冻结的 M3 兼容字段，
-# 当前不会执行；不要仅因字段存在就认为功能已开启。以 STATE.md 为准。
+# V1 已实际执行 watch/runtime/gates、固定 repair DSH/provider/model、
+# 预算与 30% 收敛提醒、低价时段、三种交付模式、通知和 candidate model smoke。
+# 下面是可直接裁剪的完整示例；未显式开启的高风险能力仍保持关闭。
 
 watch:
   registry: https://registry.npmjs.org
   package: "@deepseek-ai/dsh"
   channel: latest
-  # 无需额外配置：版本号没变但实际安装内容变化时，会重跑完整兼容测试，但暂不调用维修模型。
+  # 版本号没变但实际安装图变化时，会重跑完整兼容测试。
+  # 只有已有可信基线且新安装图失败时，才会进入维修模型。
 
 runtime:
   # auto 依次读取 .node-version、.nvmrc、package.json#engines；都没有则使用 Node 24 LTS。
@@ -88,7 +88,7 @@ gates:
 
 budget:
   scope: repository-target-version
-  # MVP 累计 DSH/DeepSeek 实际暴露的 usage；缺少 usage 的辅助调用只记调用次数。
+  # 累计 DSH/DeepSeek 实际暴露的 usage；缺少 usage 的辅助调用只记调用次数。
   # 不额外实现 OpenAI-compatible 账单解析器。
   max_tokens: 1000000
   max_cny: 10

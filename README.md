@@ -1,89 +1,157 @@
-# DSH Plugin Compatibility Guardian
+<div align="center">
+  <img src="assets/guardian-logo.png" width="180" alt="DSH Plugin Compatibility Guardian logo">
+  <h1>DSH Plugin Compatibility Guardian</h1>
+  <p><strong>让 DeepSeek Harness 插件自己跟上 DSH 更新。</strong></p>
+  <p>自动发现新版 → 隔离安装与真实启动 → 不兼容时用 DSH 本身修复 → 独立复验 → 交付可合并 PR。</p>
 
-安装在 DeepSeek Harness（DSH）插件仓库中的 GitHub Actions 维修机器人：追踪 NPM `latest`，隔离验证插件，不兼容时用本轮已锁定的 repair DSH 自动修复，再由独立 verifier 复验并产出可合并 PR。
+  [English](README.en.md) · [设计白皮书](docs/WHITEPAPER.md) · [真实验收](docs/FINAL_VALIDATION.md)
 
-当前阶段：V1 实现完成。公开样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) 已在 GitHub-hosted `ubuntu-24.04` 上完成无模型验证、受控不兼容、真实 DSH 自动维修、独立复测、真实模型/视觉 smoke、PR 交付、direct-push、auto-merge 安全等待和合并后 NOOP。可复核链接、实时验收边界和 token/估算费用见 [STATE.md](STATE.md) 与 [最终验收报告](docs/FINAL_VALIDATION.md)。
+  ![License](https://img.shields.io/github/license/LCYLYM/dsh-plugin-compat-guardian?color=2563eb)
+  ![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white)
+  ![DSH](https://img.shields.io/badge/repair%20DSH-0.1.1--rc.2-06b6d4)
+</div>
 
-## 安装到一个插件仓库
+> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 官方将当前阶段标为 developer preview，并明确提醒可能有破坏性变更。Guardian 只解决这一个问题：**DSH 更新后，插件还能否安装、启动和工作？不能时能否自动修好？**
 
-前提：目标仓库工作树干净，已安装 Node 24、Git 和已登录的 `gh`。在目标仓库执行：
+## 60 秒安装
+
+要求：目标插件仓库已有可运行的测试/构建命令，本机已登录 `gh`，工作树干净。
 
 ```bash
 npm exec --yes \
-  --package=github:LCYLYM/dsh-plugin-compat-guardian#5934767074ff0f0c1d1e7283e50b9cb64e3669c6 \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#317e9858dedf2c16c24558b9d448ac7b24190b41 \
   -- dsh-plugin-compat-guardian onboard \
-  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@5934767074ff0f0c1d1e7283e50b9cb64e3669c6
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@317e9858dedf2c16c24558b9d448ac7b24190b41
 ```
 
-命令只创建并推送 onboarding 分支，然后打开一次人工审核 PR，不直接改默认分支。审核 `.dsh-compat.yml`、`compatibility/dsh-smoke.yml` 和 workflow 后合并，再用 `gh secret set DEEPSEEK_API_KEY` 在目标仓库录入维修凭据。Secret 只在可信默认分支的 repair job，以及 contract 已明确开启真实模型 smoke 时的无 Git 写权 candidate-smoke job 中可见；verifier/publisher 不可见。若自动发现不了插件 health surface，命令会明确停止，用户补充契约后再提交，不会生成假断言。
+这条命令会打开一个 onboarding PR，不会直接改默认分支。你只需首次审核三件事：
 
-交付默认为人工审核 PR；也可显式改为 `auto-merge` 或 `direct-push`。`direct-push` 会直接改默认分支，只适合已接受该风险的仓库。默认 `GITHUB_TOKEN` 创建的 PR 如果被 GitHub 要求人工批准 checks，Guardian 会明确停在 `WAITING_FOR_GITHUB_APPROVAL`；真正无人值守的 auto-merge 需可选 publisher PAT。30% 收敛提醒、低价排队和外部通知均已实现，是否启用仍由仓库配置决定。
+1. `.dsh-compat.yml` 里的测试命令、额度和交付模式。
+2. `compatibility/dsh-smoke.yml` 是否真的证明了你的插件能力。
+3. workflow 是否固定到完整 40 位 Guardian commit SHA。
 
-V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目的 reusable workflow/orchestrator。无论仓库是原创插件还是魔改 fork，都只维护当前仓库，不自动同步或联系 upstream。
+然后在仓库设置中完成两项：
 
-- [方案与讨论稿](docs/DESIGN.md)
+```bash
+# 安全地提示输入，不把 key 写进文件或 shell 历史
+gh secret set DEEPSEEK_API_KEY
+
+# 允许 GitHub Actions 创建维修 PR；默认权限仍保持 read
+gh api --method PUT repos/{owner}/{repo}/actions/permissions/workflow \
+  -f default_workflow_permissions=read \
+  -F can_approve_pull_request_reviews=true
+```
+
+> 不想让 Actions 建 PR 也可以。Guardian 会推送已验证分支并停在 `WAITING_FOR_GITHUB_APPROVAL`，你手工开 PR 即可。
+
+## 它实际做什么
+
+```mermaid
+flowchart LR
+  A[NPM latest / 安装图变化] --> B[无 Key 机械验证]
+  B --> C{插件是否通过?}
+  C -- 是 --> D[更新 verified lock]
+  D --> E[PR / auto-merge / direct-push]
+  C -- 否 --> F{已有可信基线?}
+  F -- 否 --> G[ONBOARDING_BLOCKED<br/>不调用模型]
+  F -- 是 --> H[固定 repair DSH<br/>DeepSeek 有额度修复]
+  H --> I[原 smoke contract<br/>独立 verifier 复验]
+  I --> E
+  I -- 仍失败/额度到顶 --> J[FROZEN<br/>等待 resetBudget=N→Y]
+```
+
+无模型 verifier 会在临时目录中：
+
+- 冻结当次 `@deepseek-ai/dsh` 精确版本、NPM integrity 和完整安装图。
+- 按仓库原生 npm/pnpm/yarn 规则安装依赖并跑测试/构建。
+- 用 `npm pack` 产出真实插件 tarball，安装到隔离 `DSH_HOME`。
+- 检查 `dump-config`，真实启动 `dsh web`，执行插件专属 smoke，再卸载并确认无残留。
+- 仅当“旧基线 PASS、新候选 FAIL”时才允许模型维修。
+
+## 一眼能看懂的报告
+
+Actions Summary、Issue 和 PR 默认使用中文，先给结论和下一步，再折叠展开机械证据：
+
+```text
+🛡️ DSH 插件兼容性报告
+✅ 已通过
+
+目标 DSH       @deepseek-ai/dsh@0.1.1-rc.2
+插件           dsh-whale-report@0.1.4
+检查           22 项通过 / 0 项失败
+下一步       审核并合并 verified lock PR
+```
+
+报告只保存脱敏后的命令摘要、hash、状态、耗时和 usage。API Key、认证头、完整模型对话和本机私有路径不进报告。
+
+## 交付模式
+
+| 模式 | 会发生什么 | 默认 |
+| --- | --- | --- |
+| `pull-request` | 生成可审核 PR | ✅ |
+| `auto-merge` | 先建 PR，checks/分支规则通过后合并 | 关 |
+| `direct-push` | 通过复验后直接推默认分支 | 关 |
+
+`auto-merge` 和 `direct-push` 是真能力，但不默认开启。如果修复改了测试、测试命令、安装脚本、依赖 major 或新增/删除依赖，无论仓库选什么都强制回到人工 PR。
+
+## 额度、低价时段与防死循环
+
+默认的每个“仓库 + 目标 DSH 版本”维修活动：
+
+- 最多 1,000,000 token、10 CNY 估算、60 分钟活跃时间、2 轮模型尝试。
+- 预算只剩 30% 时，默认给 repair DSH 发一次“尽快收敛”提醒，可关闭。
+- 确定性测试立即跑；只有确实要调模型修代码时，才可选等待 DeepSeek 低价时段。
+- 同一版本默认只自动维修一次。额度到顶后，只有提高限额，或把 `.dsh-compat.lock.json` 中 `resetBudget` 从 `N` 改成 `Y` 并提交，才再维修一次；该次 `Y` 会立即消费回 `N`。
+- timeout/429/5xx 不循环烧钱：只短重试一次，然后等手工运行、相关配置变化或新 DSH 版本。
+
+CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSeek 账户账单级硬限额。绝对账户限额仍应在 provider 侧设置。
+
+## 默认与可配置项
+
+- 候选 DSH：跟踪 NPM `latest`，即使根版本号未变但内部安装图变了也会复测。
+- repair DSH：默认固定 `0.1.1-rc.2`，可改；每次 campaign 开始后锁定。
+- provider/model：默认 `deepseek-official/deepseek-v4-flash-vision-exp`，可改 `base_url`、Secret 环境变量名和 model ID。
+- DeepSeek 官方搜索：repair DSH 可按需使用，不要求每轮搜，不另设搜索次数上限。
+- monorepo：用 `plugin.workspace` 指向真实插件 package；仓库依赖安装和 gates 仍在 root 运行。
+- 通知：GitHub Summary/Issue 内置；email、Telegram 和 webhook 是可选窄网关。
+
+完整示例见 [`.dsh-compat.example.yml`](.dsh-compat.example.yml)。
+
+## 真实证据
+
+| 样本 | 结果 | 当前证明的边界 |
+| --- | --- | --- |
+| [`dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) | ✅ 真实自动修复 | 受控不兼容 → DSH 维修 → 独立复验 → PR，另有视觉 smoke/direct-push/auto-merge/NOOP 证据 |
+| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) | ✅ PASS | 真实插件 API 断言、安装/启动/卸载 |
+| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) | ✅ PASS | 大型 pnpm monorepo 中的 Skill Explorer package |
+| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) | ✅ PASS | 新于当前宿主的 peer cohort 仍能安装、组合、启动；不等于 watchdog 行为验收 |
+| [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | 🛑 ONBOARDING_BLOCKED | 历史 lock 依赖已从 NPM 撤下；没有可信基线，正确不调模型 |
+
+完整运行 ID、PR、实际 token/估算 CNY 和尚未绑定的可选外部渠道，见 [最终验收报告](docs/FINAL_VALIDATION.md)。
+
+## 边界和风险
+
+- Guardian 是维修机器人，不是通用依赖升级、测试改写或代码整理机器人。
+- 插件专属 smoke 的证明力决定兼容结论的上限。客户端插件如果只断言了 web shell，就只能证明安装/启动，不能宣称 UI 行为已验收。
+- `direct-push` 能绕过人工 review；开启前应配合分支保护、CODEOWNERS 和仓库自带测试。
+- Secret 只进入可信默认分支上的 repair job，以及 contract 明确启用的无 Git 写权模型 smoke job。fork PR 和普通 PR 代码不会拿到 Key。
+- 本项目与 DeepSeek 官方无隶属关系。使用前请审核 workflow、固定 SHA 和仓库权限。
+
+## 文档导航
+
+- [方案与状态机](docs/DESIGN.md)
 - [白皮书](docs/WHITEPAPER.md)
-- [完整落地列表](docs/IMPLEMENTATION_PLAN.md)
-- [历史证据与当前契约](docs/REFERENCE_EVIDENCE.md)
+- [完整需求与落地对照](docs/IMPLEMENTATION_PLAN.md)
+- [原设计偏离/缺失/多做审计](docs/SCOPE_AUDIT.md)
 - [最终验收报告](docs/FINAL_VALIDATION.md)
-- [配置示例](.dsh-compat.example.yml)
-- [长期验收合同](ACCEPTANCE.md)
-- [当前切片状态](STATE.md)
+- [历史证据](docs/REFERENCE_EVIDENCE.md)
+- [长期验收合同](ACCEPTANCE.md) · [当前状态](STATE.md)
 
-repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider/model 默认使用 `deepseek-official/deepseek-v4-flash-vision-exp`；DSH 版本、provider、base URL、key 的环境变量引用和 model ID 均可由仓库覆盖，但一次 campaign 开始后必须锁定实际值与制品完整性，不能中途漂移或静默回退。候选 DSH 仍跟随运行时的当前 `latest` 并最终收敛到最新制品。
+## 开发
 
-有时 NPM 上显示的 DSH 版本号没变，但它依赖的内部组件已经更新。同一次测试或维修会锁定整套依赖，保证前后使用同一套代码；以后的定时巡检则重新模拟“用户今天全新运行 `npx` 会装到什么”。如果实际安装内容变了，Guardian 会重新执行仓库测试、插件打包安装、`dump-config`、真实 `dsh web` 启动和插件专属 smoke 断言。这时仍不调用 repair DSH；只有 contract 明确要求真实模型 smoke 时，检测本身才会产生并记录模型 token。测试失败后才进入维修；如果这个根版本已经用过一次自动维修，就提示用户把 `resetBudget` 从 `N` 改成 `Y` 后继续。
+```bash
+npm ci
+npm run check
+```
 
-该默认模型由当前 DSH 的 `deepseek-official` provider 声明为 `text + image`，可直接消费截图等视觉证据。DeepSeek 官方联网搜索则是 DSH 的独立 search provider，会产生另一笔模型调用；它不是“视觉模型自带搜索”。默认同样选择上述模型，仓库可以覆盖；搜索缺少 token usage 时只记录调用次数，不为几分钱的误差另造计费系统。
-
-默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，contract 要求的真实模型 smoke 也不等待低价。只有确实需要修代码时才等待低价时段调用 repair DSH。Guardian 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；每段 usage 按它实际发生的峰/谷时段累加，不会用当前价格重算历史。这是本地估算门，不是 provider 账单级实时断路器；绝对账户额度仍应在 DeepSeek 官方侧设置。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。
-
-维修时默认允许改当前仓库内普通插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
-
-仓库测试也可以由机器人提案修改，但只要维修 diff 改了测试文件、测试配置或测试命令，本次就强制生成普通 PR，不能自动合并或直接推送，必须由人检查是否在“改答案”。没有修改测试面的维修仍按仓库选择的交付模式执行。
-
-依赖只做与本次 DSH 不兼容直接相关的最小调整：可以改已有 DSH 依赖的版本范围并同步 lockfile，但不允许顺手全量升级、更新无关依赖或更换包管理器。新增/删除依赖、跨 major 升级或修改安装生命周期脚本时强制普通 PR；其余通过完整复验后仍可按仓库配置自动交付。
-
-`lib/dist` 不会仅凭目录名被当成生成物。仓库有明确构建命令和对应源码时，机器人改源码，verifier 在干净环境重建并要求已跟踪产物完全一致；无法复现就不通过。仓库没有构建命令且 `lib` 本身就是维护代码时，它按普通源码处理。可重复构建且一致的产物不额外触发人工审核。
-
-普通仓库文件可以新增、修改和删除，不再针对重命名、可执行文件等情况设计额外分级。前述 workflow、Guardian、contract/verifier、凭据等保护内容同样不能删除；其他误删会由原有构建、测试、打包、安装和 smoke 验收拦住。
-
-报告会列出改动文件数和增删行数，但不会因为数字大就机械阻断；生成文件可能让这个数字失真。防死循环与失控仍由 token/金额/时间/轮次预算、每版本一次自动维修、保护路径和独立 verifier 负责，不增加新的行数配置。
-
-模型 key 只会在可信默认分支上的定时、手工或默认分支 push campaign 中使用。已审核 contract 要求的 candidate 固定 smoke 可以临时用一次；repair DSH 则必须先由无 key job 确认确实是 DSH 兼容失败，才进入带 key 的维修 job。普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和任意 ref 都拿不到 key；负责提交的 Git 写权限仍放在独立 publisher job。
-
-本项目只修“DSH 更新后插件不兼容”这一件事。它不是通用依赖升级机器人、CI 修复机器人或代码整理机器人；测试、预算、通知和交付功能都必须直接服务于发现、证明、修好并交付 DSH 兼容修复。
-
-默认每 6 小时检查一次 NPM `latest` 和实际安装图，也支持手工立即检查；默认分支中的 Guardian 配置、lock 或已审核 smoke contract 变化会触发一次处理，普通插件源码 push 不会。GitHub cron 只是唤醒器，即使延迟或错过中间版本，醒来后也直接处理当时的最新版本。
-
-首次 onboarding 还没有历史兼容记录时，先用本轮锁定的 repair DSH（默认 rc.2）跑完整验收。通过后它才成为第一份 `verified`，然后继续检查当前 latest；如果它自己都失败，只报告 `ONBOARDING_BLOCKED`，不调用模型把仓库原有问题当成 DSH 更新问题，也不增加另一项 baseline 配置。
-
-每次维修会锁定启动时的默认分支 commit。发布前如果仓库已有新提交，旧修复标为 `STALE_SOURCE`，不能自动合并或推送；下一次先对新代码做无模型复测。此前没调用模型就保留那一次机会，已经调用过则源码变化不会赠送第二次额度，仍需用户 reset。
-
-每个目标 DSH 版本使用独立维修 PR。PR 还没合并而 latest 又更新时，旧 PR 会标记 `SUPERSEDED` 并关闭，历史仍保留；新版本从当前默认分支重新验证，确实需要时另开 PR，不把两个版本混在同一个 PR 里。
-
-插件里的薄 workflow 使用完整 commit SHA 固定 Guardian 引擎，旁边标注版本；DSH 更新不会改这行。V1 不检查 Guardian 自身更新，也不创建 Guardian 更新 PR。以后确实需要升级 Guardian 时，用户手工替换这一行 SHA 或重新运行安装即可。
-
-DSH 新版直接通过、无需修代码时，也会提交精确 verified lock，避免六小时后重复测试。简短报告放在 PR、campaign Issue 或 Actions Summary，lock 保存链接，不在仓库堆逐版本报告文件；开启 auto-merge 或 direct-push 后按对应模式自动落库，插件代码保持不变。
-
-默认每个目标版本最多使用 1,000,000 总 token、估算 10 元、60 分钟实际运行时间和 2 轮维修，任一上限先到就停止；剩余 30% 时默认只提醒 DSH 收敛一次。等待低价窗口不计入 60 分钟，所有数值都可由仓库覆盖。
-
-repair DSH 默认可以按需使用 DeepSeek 官方搜索，提示词会建议查官方标准、文档、源码和 NPM 元数据作辅助，但不要求每轮都搜索。Guardian 不设搜索专属次数限制；搜索失败会记录并继续本地诊断，不换模型，也不能代替独立 verifier。整体 60 分钟运行上限仍然有效。
-
-待测试的新 DSH 默认拿不到模型 key。只有 onboarding PR 中已审核的 smoke contract 明确写了 `requires_model_turn: true`，才会在一个无 Git 写权限的独立步骤里，用仓库配置的同一套 provider、model 和 Secret 跑一次固定真实模型回合；这次用量计入同一版本预算，缺 key 就报告 `BLOCKED`。V1 不增加临时代理服务，因此该测试进程在这一步确实能接触 key，这是启用真实模型 smoke 时需要接受的边界。
-
-真实模型 smoke 不检查模型必须回答某句话，也不评价回答“好不好”。它只检查本轮冻结输入确实被插件处理、附件或图片确实进入模型请求、provider 成功返回、DSH 收到非空结果；用户可在 onboarding contract 中增加更强的确定性断言，但维修机器人不能修改它。
-
-模型 smoke 默认只测新 DSH，沿用“插件当前本来就是好的”这一实用假设；用户可在 onboarding contract 选择旧版和新版各测一次。发生修复后必须在新 DSH 上复测，完全相同的快照会去重。fixture 默认使用已审核固定文件，也可允许 DSH 在隔离区自行寻找、生成或下载公开文件；一旦选中，本 campaign 内就冻结同一份内容。timeout、429 或 provider 5xx 只立即重试一次，再失败就标记 `BLOCKED_EXTERNAL`，等待手工运行、相关配置变化或新 DSH 版本，不让六小时定时任务循环烧调用。
-
-PR 和报告只保存输入 hash、机械事件、状态、耗时、usage 与脱敏错误；失败的脱敏 Actions artifact 保留 7 天。key、认证头、完整请求和完整模型对话都不持久化。
-
-如果 Guardian 判断 smoke contract 本身需要调整，它会停止当前代码维修并另开一个只含 contract/fixture 的人审 PR；不会把改验收标准和改代码混在一起。合并后立即重测，但已经花掉的预算和维修次数不会恢复。`BLOCKED_EXTERNAL` 则更轻：手工运行或提交相关 provider/contract 配置即可再试一次 smoke，无需改 `resetBudget`，也不会重置维修预算。
-
-每个目标最终只发布一个整理后的 bot commit，中间失败尝试放 PR 评论/Issue 和短期 artifact。Actions Summary 每次都有；email、TG、webhook 只在首次等待低价、一次 30% 提醒和最终 `PASS/BLOCKED/SUPERSEDED` 时发送，六小时 `NOOP` 不打扰人。
-
-运行环境默认也保持简单：优先遵循插件仓库自己的 `.node-version`、`.nvmrc`、Node engines 和 package manager 声明；都没有时用 Node 24 LTS + npm。V1 自动识别 npm/pnpm/yarn，遇到冲突 lockfile 或 Bun 明确阻塞；默认单个 `ubuntu-24.04` runner，可覆盖但不自动铺三系统 matrix。
-
-首次安装只需在目标仓库执行 `npx dsh-plugin-compat-guardian onboard`。它在临时区生成并用 `gh` 打开 onboarding PR，没有 `gh` 时留下本地分支和明确命令；不直接写默认分支，也不把 key/base URL 写入 PR。publisher 默认使用仓库 `GITHUB_TOKEN`；无人值守 auto-merge 才可选配置只对 publisher 可见的细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`。
-
-设计原则：大道至简；一次只移动一个基线变量；agent 只能提案，独立 verifier 才能判 PASS；可以显式选择高自动化，但不用提示词代替权限、预算和防循环机械门。
+当前本地套件：46/46 通过。项目采用 MIT License。

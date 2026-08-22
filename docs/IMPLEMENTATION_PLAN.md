@@ -160,3 +160,14 @@ workflow 必须有 per-repository concurrency；触发源只包括 schedule、ma
 ## 8. 交付线
 
 M0–M3 实现完成，详见 `STATE.md` 和 `FINAL_VALIDATION.md`。当前交付线仍不把本地 usage 估算说成 provider 账单级实时硬限，也不把未配置目标的 email/TG/webhook 或未提供 PAT 的无人 auto-merge 说成已完成现场投递。
+
+## 9. 2026-08-22 社区回归补强
+
+- [x] 中文优先的 Summary/Issue/Telegram 文案，报告先结论和下一步，技术证据折叠。
+- [x] `plugin.workspace` 贯通 verifier、model smoke 和 repair diff policy，并阻断 symlink 逃出仓库。
+- [x] 修复 `npm pack --json` 被 scoped-package `prepare` 日志干扰的真实问题。
+- [x] 公开 fork 并运行 Whale Report、dsh-web-ui monorepo、Ankh Guard 和 better-sidebar Office 四类样本。
+- [x] 重新扫描 Guardian/fixture 历史、本轮 commit diff 和 Actions 日志的 secret/私有路径。
+- [x] 双语 README、项目 Logo、Mermaid 主链图、GitHub topics 和 Actions 创建 PR 开关说明。
+
+本轮与原设计的缺失/多做/边界对照见 [`SCOPE_AUDIT.md`](SCOPE_AUDIT.md)。

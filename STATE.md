@@ -19,7 +19,7 @@
 
 ## 公开真实证据
 
-- 引擎经验证 commit：[`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`](https://github.com/LCYLYM/dsh-plugin-compat-guardian/commit/5934767074ff0f0c1d1e7283e50b9cb64e3669c6)。
+- 当前社区验证 commit：[`317e9858dedf2c16c24558b9d448ac7b24190b41`](https://github.com/LCYLYM/dsh-plugin-compat-guardian/commit/317e9858dedf2c16c24558b9d448ac7b24190b41)。原自动修复主链使用 `5934767`，当前 commit 在其上新增中文报告、monorepo workspace 和更稳健的 `npm pack --json` 解析。
 - 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)。
 - 真实历史不兼容自动维修：[run 32560587541](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32560587541) / [PR #10](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/10)。修复 `httpServer` 到 rc.2 的 `webServer`，338,599 tokens，估算 0.150001 CNY，repair 47.603s。
 - 真实模型/视觉 smoke：[run 32565423873](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32565423873)。2,712-byte PNG 的 SHA-256 为 `c88283c1c8b71e4ebfb190e7a4a462dd4a51dd42383f1790b1e28d5f5179b62c`，`imageObserved` 和 `pluginInputObserved` 均为 true，provider 返回非空结果。
@@ -28,6 +28,7 @@
 - `direct-push`：[run 32566086836](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566086836)，bot 直接更新 main，commit 包含 campaign [Issue #16](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/issues/16) 链接。
 - `auto-merge`：[run 32565934822](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32565934822) 创建 [PR #15](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/15)；默认 Actions token 按 GitHub 权限边界进入 `WAITING_FOR_GITHUB_APPROVAL`，仓库 owner 后续启用 auto-merge 成功。
 - 真实外部暂态故障和恢复：[run 32566217178](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566217178) 安全停在 `BLOCKED_EXTERNAL`，修正 RPC readiness 后 [run 32566532050](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566532050) PASS。
+- 社区异构样本：[Whale Report](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) PASS；[`dsh-web-ui` Skill Explorer](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) 在大型 pnpm monorepo 中 PASS；[Ankh Guard](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) 安装/组合/web 启动 PASS；[Office 插件](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) 因历史 NPM 依赖已撤下而 `ONBOARDING_BLOCKED`，未误调模型。
 
 详细证据矩阵见 [docs/FINAL_VALIDATION.md](docs/FINAL_VALIDATION.md)。
 

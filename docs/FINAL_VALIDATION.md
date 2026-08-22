@@ -1,8 +1,9 @@
 # V1 最终验收报告
 
 日期：2026-08-22  
-引擎验证 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`  
-实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`  
+自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
+社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
+实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`
 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)
 
 ## 结论
@@ -39,7 +40,7 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 ## 确定性验证
 
-`npm run check` 通过 38/38 项测试，包括：
+`npm run check` 通过 46/46 项测试，包括：
 
 - usage 去重、峰/谷价格、历史费用累加和未知 route；
 - `N -> Y` 单次 reset、增加额度恢复、低价等待、手工 bypass、30% 一次收敛和四类上限；
@@ -47,6 +48,31 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 - 三种交付模式、通知 event ID 去重、不启用 adapter 零网络请求；
 - 视觉 fixture 字节冻结与仓库越界拒绝、rc.2 web/RPC envelope 兼容；
 - onboarding 发现、完整 SHA 强制、Node/包管理器冲突阻断和 workflow 分 job 最小权限。
+- 中文报告可扫读性、onboarding 失败的下一步说明、monorepo workspace 逃逸阻断与 workspace manifest diff policy。
+- 带 scoped-package 构建日志的 `npm pack --json` 解析回归；该问题先在真实 `dsh-web-ui` 验证中复现再修复。
+
+## 社区仓库回归
+
+| 样本 | 精确测试面 | 结果 |
+| --- | --- | --- |
+| [Whale Report run 32570423087](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) | 仓库测试/构建、pack/add/dump/web、`/whale/api/list`、remove | PASS |
+| [`dsh-web-ui` run 32570426593](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) | pnpm monorepo 根安装，`packages/dsh-skill-explorer` 测试/构建/打包，health 断言 | PASS |
+| [Ankh Guard run 32570430758](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) | 测试/构建、pack/add/dump/web/remove | PASS；不宣称 watchdog 行为已验收 |
+| [Office run 32570428991](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | 首次基线的 frozen install | `ONBOARDING_BLOCKED`；`@deepseek-ai/dsh-type-meta@0.0.1-rc.1` 已从 NPM 撤下，没有进入模型修复 |
+
+本轮没有找到一个“上游未修、对当前 NPM latest rc.2 可安装且真实回归”的社区 commit。Whale Report 历史中标注的新 harness 修复，其修复前 commit 对 rc.2 实测仍 PASS；不用提交说明替代当前运行事实。因此社区样本用于异构回归和诚实阻断证据，真实自动修复成功案例仍由受控公开 fixture 的 run 32560587541 / PR #10 承担。
+
+## 提交历史与公开日志去敏审计
+
+发布前用同一组 credential/private-path 模式只计数、不回显内容地扫描：
+
+- Guardian 全历史 44 个 commit：文件内容 0 命中，commit message 0 命中。
+- 公开 fixture 全历史 35 个 commit：文件内容 0 命中，commit message 0 命中。
+- 四个社区 fork 中由本项目新增的 8 个 unique commit：新增行 0 命中，commit message 0 命中。
+- fixture + 四个 fork 共 29 次 Actions run：28 份可读日志 0 命中；1 次早期取消 run `32559978584` 的 GitHub job log 不存在，无可读面，不写成“已扫描通过”。
+- 当前未提交文档/Logo diff：0 命中。
+
+上述模式包含 DeepSeek/GitHub/NPM/AWS/Slack 常见 token 形态、用户本机绝对路径、Codex 会话目录和原参考工程私有路径。
 
 ## 验收边界
 
