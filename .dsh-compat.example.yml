@@ -1,5 +1,10 @@
 schema: 1
 
+# M2 MVP 实际执行 watch/runtime/gates、固定 repair DSH/provider/model、保护路径、
+# token/CNY/墙钟交付门和 pull-request 发布。start_policy、30% steer、max_attempts > 1、
+# auto-merge/direct-push、notifications 与 candidate model smoke 是已冻结的 M3 兼容字段，
+# 当前不会执行；不要仅因字段存在就认为功能已开启。以 STATE.md 为准。
+
 watch:
   registry: https://registry.npmjs.org
   package: "@deepseek-ai/dsh"

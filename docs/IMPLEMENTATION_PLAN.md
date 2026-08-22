@@ -1,7 +1,7 @@
 # 完整落地列表
 
-日期：2026-08-21
-执行状态：M0 本地 PASS，M1 待公开远端
+日期：2026-08-22
+执行状态：M0/M1/M2 MVP 公开 PASS，M3 增强项待实现
 
 本文把 `ACCEPTANCE.md` 的 R1–R51 映射成可实现、可验证、可暂停的工程任务。`open` 表示尚无真实证据，`doing` 表示当前切片，`partial` 表示只覆盖了需求的一部分，`pass` 必须绑定真实运行证据。
 
@@ -35,16 +35,16 @@ M0 明确不调用 repair/model，不开 auto-merge/direct-push；这些不是�
 
 | ID | 里程碑 | 实现项 | 必须看到的证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| R1 | M0/M1 | registry resolver、latest 收敛、root integrity、pnpm graph digest、supersede/dedupe | 两份同版本不同 graph fixture；latest 跳变 | doing |
-| R2 | M0/M2 | candidate/repair 两套临时安装根和 DSH_HOME；动态 spec 开局冻结 | 目录、version、integrity、graph 全不同且可回读 | doing |
+| R1 | M0/M1 | registry resolver、latest 收敛、root integrity、pnpm graph digest、supersede/dedupe | 两份同版本不同 graph fixture；latest 跳变 | partial |
+| R2 | M0/M2 | candidate/repair 两套临时安装根和 DSH_HOME；动态 spec 开局冻结 | 目录、version、integrity、graph 全不同且可回读 | pass |
 | R3 | M0/M2 | baseline 与 candidate 执行同一个 gate runner | 只替换 DSH snapshot 的差分报告 | partial |
-| R4 | M0/M1 | PASS 报告、verified lock、无代码 PASS 提交 | 失败不写 verified；下一轮 NOOP | doing |
-| R5 | M2 | repair worktree、原 contract hash、独立 verifier | 真实失败、窄 diff、原 gate PASS | open |
-| R6 | M2 | campaign ledger、usage 归一化、CNY map、30% steer | 跨 run 累计与四个硬上限故障注入 | open |
-| R7 | M1/M2 | 状态机、concurrency、一次自动维修门 | schedule 重放不再调模型 | open |
-| R8 | M2 | DSH 原生 provider/env 适配和 redactor | 默认/自定义 route 真实调用且无 secret 泄漏 | open |
-| R9 | M1 | 薄 workflow + reusable action，无中央依赖 | 公开 fixture 的仓库内完整 run | partial |
-| R10 | M0/M1 | onboarding 发现器、hints、生成 contract、人审 PR | fixture contract 覆盖报告和防篡改测试 | doing |
+| R4 | M0/M1 | PASS 报告、verified lock、无代码 PASS 提交 | 失败不写 verified；下一轮 NOOP | pass |
+| R5 | M2 | repair worktree、原 contract hash、独立 verifier | 真实失败、窄 diff、原 gate PASS | pass |
+| R6 | M2 | campaign ledger、usage 归一化、CNY map、30% steer | 跨 run 累计与四个硬上限故障注入 | partial |
+| R7 | M1/M2 | 状态机、concurrency、一次自动维修门 | schedule 重放不再调模型 | partial |
+| R8 | M2 | DSH 原生 provider/env 适配和 redactor | 默认/自定义 route 真实调用且无 secret 泄漏 | partial |
+| R9 | M1 | 薄 workflow + reusable action，无中央依赖 | 公开 fixture 的仓库内完整 run | pass |
+| R10 | M0/M1 | onboarding 发现器、hints、生成 contract、人审 PR | fixture contract 覆盖报告和防篡改测试 | partial |
 | R11 | M1/M3 | publisher 的 PR/auto-merge/direct-push 三模式 | 三模式 GitHub 回读及保护分支失败 | open |
 | R12 | M2 | `N -> Y` edge、budget epoch、reset commit 去重 | 静态 Y/rerun 不重复恢复 | open |
 | R13 | M1 | current-repo-only guard；不读取 upstream remote | fork fixture 零 upstream 写调用 | partial |
@@ -52,8 +52,8 @@ M0 明确不调用 repair/model，不开 auto-merge/direct-push；这些不是�
 | R15 | M2/M3 | 默认 vision model、真实图片 smoke、DSH search 事件 | image 入请求、搜索调用/usage 分开记录 | open |
 | R16 | M2 | 价格 revision、时区窗口、立即检测/延迟维修 | 峰谷边界和未知 route CNY unknown | open |
 | R17 | M0/M2 | 同根 graph 变化复测；不赠预算 | 两份 graph、完整 gate、repair 门保持 | doing |
-| R18 | M0/M2 | 先无 key PASS，再注入 `httpServer` 故障真修 | 两阶段公开证据，均无自动合并 | doing |
-| R19 | M2 | realpath denylist、protected diff guard | 普通源码允许；每类保护路径拒绝 | open |
+| R18 | M0/M2 | 先无 key PASS，再注入 `httpServer` 故障真修 | 两阶段公开证据，均无自动合并 | pass |
+| R19 | M2 | realpath denylist、protected diff guard | 普通源码允许；每类保护路径拒绝 | partial |
 | R20 | M2 | 测试面 classifier 强制普通 PR | test/config/script 三类降级 | open |
 | R21 | M2 | 依赖 diff classifier 和因果说明 | allow/reject/human-review 三组样例 | open |
 | R22 | M2 | build/source detector、干净重建、byte compare | deterministic/nondeterministic/no-build 四样例 | open |
@@ -65,8 +65,8 @@ M0 明确不调用 repair/model，不开 auto-merge/direct-push；这些不是�
 | R28 | M0 | 无 verified 时先跑 frozen repair baseline | baseline PASS/FAIL/与 latest 同 snapshot 去重 | doing |
 | R29 | M1/M2 | base SHA 二次读取、STALE_SOURCE | 四阶段竞态测试且预算不重置 | open |
 | R30 | M1/M2 | target-version branch/PR、supersede close | 旧 PR 留痕关闭、新 PR 新建、无 force push | open |
-| R31 | M1 | full-SHA workflow ref validator/generator | 拒绝 branch/tag；DSH 更新 workflow 零 diff | partial |
-| R32 | M0/M1 | no-repair PASS 只改 lock，报告 URL 持久化 | 三交付模式、下一轮 NOOP | doing |
+| R31 | M1 | full-SHA workflow ref validator/generator | 拒绝 branch/tag；DSH 更新 workflow 零 diff | pass |
+| R32 | M0/M1 | no-repair PASS 只改 lock，报告 URL 持久化 | 三交付模式、下一轮 NOOP | partial |
 | R33 | M2 | token/CNY/time/attempt 硬门和一次 steer | 四上限、等待不计时、尾差阻断 | open |
 | R34 | M2 | repair prompt + DSH native search telemetry | 用/不用/失败/无 fallback 四记录 | open |
 | R35 | M3 | reviewed contract 才给 candidate smoke Secret | 默认无 key、缺 key blocked、usage 入同桶 | open |
@@ -79,12 +79,12 @@ M0 明确不调用 repair/model，不开 auto-merge/direct-push；这些不是�
 | R42 | M3 | `BLOCKED_CONTRACT` + 独立 contract-only PR | 永远人审、合并重测、预算保持 | open |
 | R43 | M3 | external recovery edge，不改 repair ledger | manual/config 恢复与 schedule NOOP | open |
 | R44 | M1 | lock 仅机器状态+URL；报告在 GitHub surface | 三交付模式，仓库无版本报告文件 | partial |
-| R45 | M2 | publisher squash/clean commit，失败尝试不发布 | 两轮后仍只有一个 bot commit | open |
+| R45 | M2 | publisher squash/clean commit，失败尝试不发布 | 两轮后仍只有一个 bot commit | partial |
 | R46 | M1/M3 | Summary always + event-id notifier dedupe | 所有允许事件一次，NOOP 零通知 | open |
-| R47 | M0/M1 | Node 声明优先级、冲突检查、setup-node 接线 | 三声明/fallback/conflict/精确版本 | doing |
-| R48 | M0/M1 | packageManager/lockfile resolver，npm/pnpm/yarn | 三支持/fallback/conflict/Bun blocked | doing |
-| R49 | M1 | 默认 `ubuntu-24.04` + 单 label override | workflow 无 matrix 且报告 actual OS | partial |
-| R50 | M0/M1 | onboard 临时分支、gh PR/fallback、secret scan | 有/无 gh 两条真实路径，默认分支零 diff | doing |
+| R47 | M0/M1 | Node 声明优先级、冲突检查、setup-node 接线 | 三声明/fallback/conflict/精确版本 | pass |
+| R48 | M0/M1 | packageManager/lockfile resolver，npm/pnpm/yarn | 三支持/fallback/conflict/Bun blocked | partial |
+| R49 | M1 | 默认 `ubuntu-24.04` + 单 label override | workflow 无 matrix 且报告 actual OS | pass |
+| R50 | M0/M1 | onboard 临时分支、gh PR/fallback、secret scan | 有/无 gh 两条真实路径，默认分支零 diff | partial |
 | R51 | M1/M3 | GITHUB_TOKEN publisher、WAITING_APPROVAL、可选 PAT | 默认 PR、审批等待、token job 隔离 | open |
 
 ## 4. M0 文件落地
@@ -159,4 +159,4 @@ workflow 必须有 per-repository concurrency；触发源只包括 schedule、ma
 
 ## 8. 当前停止线
 
-本轮优先完成 M0。如果 M0 的真实 DSH 安装、启动或插件 HTTP 断言无法通过，就报告具体 `BLOCKED` 证据，不用假 profile、mock server 或静态源码判断替代。M0 PASS 后再安装到公开 fixture；M2 必须单独获得真实模型运行证据，不能由 M0 推断完成。
+M0/M1/M2 MVP 已按真实公开证据完成，详见 `STATE.md`。下一切片只能从 M3 未完成项中选择；不能把配置文件中保留的未来字段或 M2 单次成功外推成 30% 动态 steer、低价排队、通知、自动合并、跨 run 失败冻结或 provider 账单级硬上限已经完成。

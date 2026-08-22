@@ -2,7 +2,22 @@
 
 安装在 DeepSeek Harness（DSH）插件仓库中的 GitHub Actions 维修机器人：追踪 NPM `latest`，隔离验证插件，不兼容时用本轮已锁定的 repair DSH 自动修复，再由独立 verifier 复验并产出可合并 PR。
 
-当前阶段：设计基线 Draft 0.4 已冻结，M0 已在本地真实样本上完成无模型兼容闭环。已建立公开真实样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)；公开 GitHub Actions 复现属于下一阶段 M1，自动维修属于 M2。当前没有把本地 macOS PASS 冒充为 GitHub-hosted Ubuntu PASS。
+当前阶段：M0/M1/M2 technical MVP 已完成公开真实验收。公开样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) 已在 GitHub-hosted `ubuntu-24.04` 上完成无模型验证、受控不兼容、真实 DSH 自动维修、独立复测、维修 PR 和合并后 NOOP。可复核链接、token/费用和未完成边界见 [STATE.md](STATE.md)。
+
+## 安装到一个插件仓库
+
+前提：目标仓库工作树干净，已安装 Node 24、Git 和已登录的 `gh`。在目标仓库执行：
+
+```bash
+npm exec --yes \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#ba18c1d302f5b0948f3499455dcc6184848d56c2 \
+  -- dsh-plugin-compat-guardian onboard \
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@ba18c1d302f5b0948f3499455dcc6184848d56c2
+```
+
+命令只创建并推送 onboarding 分支，然后打开一次人工审核 PR，不直接改默认分支。审核 `.dsh-compat.yml`、`compatibility/dsh-smoke.yml` 和 workflow 后合并，再用 `gh secret set DEEPSEEK_API_KEY` 在目标仓库录入维修凭据；Secret 只映射给 repair job。若自动发现不了插件 health surface，命令会明确停止，用户补充契约后再提交，不会生成假断言。
+
+当前交付默认且只真实验收了人工审核 PR。配置文件中的 30% steer、低价排队、auto-merge/direct-push 和外部通知保留为后续兼容字段，MVP 不执行这些行为；不要因为字段存在就认为已启用。
 
 V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目的 reusable workflow/orchestrator。无论仓库是原创插件还是魔改 fork，都只维护当前仓库，不自动同步或联系 upstream。
 

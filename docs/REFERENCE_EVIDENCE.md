@@ -163,7 +163,7 @@ DeepSeek 当前官方文档明确：
 - 包名和插件代码未改，仓库元数据指向 fixture，`private: true` 只阻止误发 NPM；
 - 中英文 README 均明确它是 Guardian 自动兼容维修的公开测试副本。
 
-样本复制、原有测试和远端发布之外，本地隔离 onboarding/M0 也已运行，证据见下一节；公开 GitHub Actions 尚未运行。
+样本复制、原有测试和远端发布之外，本地隔离 onboarding/M0 也已运行，证据见下一节。2026-08-22 又完成了公开 GitHub Actions 的 M1/M2 真实链路，见第 11 节。
 
 ## 9. 2026-08-21 M0 与真实 provider 运行证据
 
@@ -201,10 +201,25 @@ key 只进入一次性进程环境，没有写进命令、仓库、报告或配�
 
 ## 10. 证据强度边界
 
-当前已证明发布制品、M0 本地真实兼容链路、普通模型 route 和 native search。尚未执行：
+截至 2026-08-21 已证明发布制品、M0 本地真实兼容链路、普通模型 route 和 native search；下面这些当时尚未执行，其中公开 Ubuntu 与自动维修已在 2026-08-22 补齐：
 
 - `0.1.1-rc.2` 中图片真实进入出站请求的端到端视觉断言；
 - 公开 fixture 的 `ubuntu-24.04` GitHub Actions run、publisher PR 和 durable report URL；
 - Guardian 的跨 run 预算、低价等待、reset、受控故障自动修复和三种交付模式。
 
-这些仍保留为 `ACCEPTANCE.md` 中的 open/partial 项；不得用本地 M0 或纯文本模型 probe 提前宣称图片 smoke、自动维修或 GitHub 发布 PASS。
+图片 smoke 与其余 M3 增强项仍保留为 `ACCEPTANCE.md` 中的 open/partial 项；不得用纯文本模型 probe 或一次 M2 维修外推为完成。
+
+## 11. 2026-08-22 公开 M1/M2 证据
+
+公开 fixture 已完成以下可回读链路：
+
+1. onboarding [PR #1](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/1) 合并；[run 32558667717](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32558667717) 在 GitHub-hosted `ubuntu-24.04` 完成真实插件测试、pack/install、配置 dump、`dsh web` 和 health assertion，并产出 lock PR。
+2. snapshot identity 曾错误包含每台临时 runner 的 `actualLabel`，造成重复 lock PR；Guardian `d0aea35` 将该字段保留在报告但排除出 snapshot key。修正后的 [run 32559127238](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32559127238) 返回 `NOOP`，没有再次发布。
+3. [PR #8](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/8) 只把插件依赖注入和注册调用从 `webServer` 改回历史错误 `httpServer`，本地测试稳定为 5/10 失败；普通源码 push 没有触发 Guardian，符合控制文件触发边界。
+4. 首次维修 [run 32560233957](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32560233957) 在旧 `dsh run` CLI 语法处失败，publisher 未运行、没有错误 PR。Guardian `ba18c1d` 改用 rc.2 支持的 `dsh --profile headless --patch ... <task>` 并增加回归测试。
+5. [run 32560587541](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32560587541) 真实执行固定 repair DSH 和默认视觉模型，生成仅含 `lib/index.js` 两处接口恢复的补丁；原始 verifier 独立复测 PASS 后，publisher 创建 [维修 PR #10](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/10)。repair job 为 `contents: read` 且 checkout `persist-credentials: false`；publisher 有 Git 写权限但没有模型 Secret。
+6. repair 报告记录 total 338,599 tokens（input 29,117、cache read 305,920、output 3,562、reasoning 1,229），价格 revision `deepseek-public-2026-08-21` 下估算 0.150001 CNY；repair DSH 主回合 47.603 秒。补丁 SHA-256 为 `301c6ea1de2e327ac075acffcc645f62a5761f32ac62850bf89cfa91ea91b146`，与下载 artifact 和 PR diff 一致。
+7. 公开 verify/repair artifacts 对 `sk-*`、Authorization/API key、`/Users/` 和 `/home/runner/work/` 的扫描为零命中；artifact 只保存机械报告、补丁、verified lock 和独立 verifier 报告，不保存完整模型对话。
+8. PR #10 人工审计后合并为 fixture `main@3e8590d475031ae0911060ebc7c1ed1e696e47e1`；[run 32560761301](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32560761301) 返回同一 snapshot `NOOP`，repair 与两个 publisher job 均跳过，无开放 PR。合并后的 fixture 原生测试 10/10 PASS。
+
+该证据只把 M2 technical MVP 判为 PASS。30% 运行中 steer、低价排队、跨 run 失败冻结、auto-merge/direct-push、外部通知和 contract-required 视觉 smoke 仍未执行，详见 `STATE.md`。
