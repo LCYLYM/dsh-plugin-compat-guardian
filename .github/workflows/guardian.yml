@@ -21,6 +21,10 @@ on:
         required: false
         default: ''
         type: string
+    secrets:
+      deepseek_api_key:
+        description: DeepSeek key exposed only to the repair job after deterministic failure
+        required: false
 
 concurrency:
   group: dsh-compat-${{ github.repository }}
@@ -35,6 +39,7 @@ jobs:
     outputs:
       status: ${{ steps.verify.outputs.status }}
       candidate_version: ${{ steps.verify.outputs.candidate_version }}
+      error_code: ${{ steps.verify.outputs.error_code }}
     steps:
       - name: Validate immutable Guardian ref
         env:
@@ -82,7 +87,6 @@ jobs:
 
       - name: Run no-model compatibility verifier
         id: verify
-        continue-on-error: true
         env:
           TARGET_DSH: ${{ inputs.target_dsh }}
           REPORT_DIRECTORY: ${{ runner.temp }}/guardian-report
@@ -97,12 +101,17 @@ jobs:
           set -e
           status=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).status")
           candidate=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).candidate?.version ?? ''")
+          error_code=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).error?.code ?? ''")
           echo "status=$status" >> "$GITHUB_OUTPUT"
           echo "candidate_version=$candidate" >> "$GITHUB_OUTPUT"
+          echo "error_code=$error_code" >> "$GITHUB_OUTPUT"
           if [[ "$status" == 'PASS' ]]; then
             cp target/.dsh-compat.lock.json "$REPORT_DIRECTORY/verified-lock.json"
           fi
-          exit "$verifier_exit"
+          if [[ "$status" == 'BLOCKED' && "$verifier_exit" -eq 0 ]]; then
+            echo 'verifier reported BLOCKED with a zero exit code' >&2
+            exit 2
+          fi
 
       # actions/upload-artifact v7.0.1, pinned 2026-08-22.
       - name: Upload sanitized mechanical evidence
@@ -113,10 +122,6 @@ jobs:
           path: ${{ runner.temp }}/guardian-report
           retention-days: 7
           if-no-files-found: error
-
-      - name: Preserve verifier failure
-        if: steps.verify.outcome == 'failure'
-        run: exit 1
 
   publish:
     needs: verify
@@ -186,3 +191,160 @@ jobs:
             --head "$BRANCH" \
             --title "ci: support DSH $CANDIDATE_VERSION" \
             --body-file ../evidence/report.md
+
+  repair:
+    needs: verify
+    if: >-
+      needs.verify.result == 'success' &&
+      needs.verify.outputs.status == 'BLOCKED' &&
+      contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED"]'), needs.verify.outputs.error_code)
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    steps:
+      # No write credential is persisted in the model-running checkout.
+      - name: Check out failed plugin source without write credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: false
+
+      - name: Check out pinned Guardian engine
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ inputs.guardian_repository }}
+          ref: ${{ inputs.guardian_ref }}
+          path: guardian
+          persist-credentials: false
+
+      - name: Download failed verifier evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-${{ github.run_id }}
+          path: failure-evidence
+
+      - name: Set up Node 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: guardian/package-lock.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: Install Guardian engine
+        working-directory: guardian
+        run: npm ci
+
+      - name: Run bounded repair DSH and independent verifier
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.deepseek_api_key }}
+          REPAIR_DIRECTORY: ${{ runner.temp }}/guardian-repair
+        run: |
+          if [[ -z "$DEEPSEEK_API_KEY" ]]; then
+            echo 'MODEL_CREDENTIAL_MISSING: configure the repository DEEPSEEK_API_KEY secret' >&2
+            exit 2
+          fi
+          node guardian/bin/dsh-plugin-compat-guardian.js repair \
+            --repo "$GITHUB_WORKSPACE/target" \
+            --failure-report "$GITHUB_WORKSPACE/failure-evidence/report.json" \
+            --output "$REPAIR_DIRECTORY"
+
+      - name: Upload sanitized repair proposal and verifier evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: dsh-guardian-repair-${{ github.run_id }}
+          path: ${{ runner.temp }}/guardian-repair
+          retention-days: 7
+          if-no-files-found: error
+
+  publish-repair:
+    needs: [verify, repair]
+    if: needs.repair.result == 'success'
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out exact failed source for publication
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: true
+
+      - name: Download verified repair proposal
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-repair-${{ github.run_id }}
+          path: repair-evidence
+
+      - name: Recheck source and publish one repair commit
+        id: prepare
+        working-directory: target
+        env:
+          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
+        run: |
+          expected=$(node -p "JSON.parse(require('fs').readFileSync('../repair-evidence/report.json', 'utf8')).source.commit")
+          actual=$(git rev-parse HEAD)
+          if [[ "$actual" != "$expected" ]]; then
+            echo "STALE_SOURCE: repaired $expected but default branch is $actual" >&2
+            exit 2
+          fi
+          git apply --index ../repair-evidence/repair.patch
+          cp ../repair-evidence/verified-lock.json .dsh-compat.lock.json
+          git add .dsh-compat.lock.json
+          while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/*|.dsh-compat.yml|compatibility/*)
+                echo "PROTECTED_PATH_CHANGED: $path" >&2
+                exit 2
+                ;;
+            esac
+          done < <(git diff --cached --name-only)
+          safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
+          branch="automation/dsh-compat/$safe_version"
+          if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            echo "repair branch $branch already exists" >&2
+            exit 2
+          fi
+          git config user.name 'dsh-compat-guardian[bot]'
+          git config user.email 'dsh-compat-guardian[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git commit -m "fix: support DSH $CANDIDATE_VERSION"
+          git push --set-upstream origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open the verified human-reviewed repair PR
+        working-directory: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.prepare.outputs.branch }}
+          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
+        run: |
+          gh pr create \
+            --head "$BRANCH" \
+            --title "fix: support DSH $CANDIDATE_VERSION" \
+            --body-file ../repair-evidence/repair-report.md
+
+  unsupported-failure:
+    needs: verify
+    if: >-
+      needs.verify.result == 'success' &&
+      needs.verify.outputs.status == 'BLOCKED' &&
+      !contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED"]'), needs.verify.outputs.error_code)
+    runs-on: ${{ inputs.runner }}
+    permissions: {}
+    steps:
+      - name: Stop without model repair for an unsupported failure class
+        env:
+          ERROR_CODE: ${{ needs.verify.outputs.error_code }}
+        run: |
+          echo "Guardian will not spend model budget on failure class: $ERROR_CODE" >&2
+          exit 2

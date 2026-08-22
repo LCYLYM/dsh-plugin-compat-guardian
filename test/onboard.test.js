@@ -68,6 +68,8 @@ test('scaffold writes the repository and immutable SHA into the thin workflow', 
     assert.match(workflow, new RegExp(`uses: owner/guardian/.github/workflows/guardian.yml@${sha}`));
     assert.match(workflow, /guardian_repository: owner\/guardian/);
     assert.match(workflow, new RegExp(`guardian_ref: ${sha}`));
+    assert.match(workflow, /deepseek_api_key: \$\{\{ secrets\.DEEPSEEK_API_KEY \}\}/);
+    assert.match(workflow, /\.github\/workflows\/dsh-compat\.yml/);
   } finally {
     await rm(path, { recursive: true, force: true });
   }

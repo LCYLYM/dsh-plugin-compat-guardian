@@ -10,6 +10,7 @@ on:
       - .dsh-compat.yml
       - .dsh-compat.lock.json
       - compatibility/dsh-smoke.yml
+      - .github/workflows/dsh-compat.yml
 
 permissions:
   contents: read
@@ -26,3 +27,5 @@ jobs:
       guardian_repository: __GUARDIAN_REPOSITORY__
       guardian_ref: __GUARDIAN_FULL_SHA__
       runner: ubuntu-24.04
+    secrets:
+      deepseek_api_key: ${{ secrets.DEEPSEEK_API_KEY }}

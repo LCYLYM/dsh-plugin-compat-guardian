@@ -15,6 +15,11 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
     contents: 'write',
     'pull-requests': 'write',
   });
+  assert.equal(workflow.jobs.repair.permissions.contents, 'read');
+  assert.deepEqual(workflow.jobs['publish-repair'].permissions, {
+    contents: 'write',
+    'pull-requests': 'write',
+  });
 
   const uses = Object.values(workflow.jobs)
     .flatMap(job => job.steps ?? [])
@@ -26,5 +31,10 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
   }
 
   assert.doesNotMatch(source, /pull_request_target|pull_request:/);
-  assert.doesNotMatch(source, /DEEPSEEK_API_KEY|secrets\./);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs.verify), /DEEPSEEK_API_KEY|secrets\./);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs.publish), /DEEPSEEK_API_KEY|secrets\./);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs['publish-repair']), /DEEPSEEK_API_KEY|secrets\./);
+  assert.match(JSON.stringify(workflow.jobs.repair), /DEEPSEEK_API_KEY.*secrets\.deepseek_api_key/);
+  const modelCheckout = workflow.jobs.repair.steps.find(step => step.name.includes('failed plugin source'));
+  assert.equal(modelCheckout.with['persist-credentials'], false);
 });
