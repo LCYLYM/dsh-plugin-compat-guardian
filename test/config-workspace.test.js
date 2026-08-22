@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { DEFAULT_CONFIG, resolvePluginPaths } from '../lib/config.js';
+import { stringify } from 'yaml';
+
+import { DEFAULT_CONFIG, loadConfig, resolvePluginPaths } from '../lib/config.js';
 
 test('plugin workspace resolves a monorepo package without changing the repository root', async () => {
   const root = await mkdtemp(join(tmpdir(), 'guardian-workspace-'));
@@ -23,6 +25,30 @@ test('plugin workspace resolves a monorepo package without changing the reposito
     await rm(root, { recursive: true, force: true });
   }
 });
+
+const INVALID_CONFIGS = [
+  ['empty provider', { repair: { provider: '' } }],
+  ['numeric model', { repair: { model: 123 } }],
+  ['relative base URL', { credentials: { base_url: '/v1' } }],
+  ['non-http base URL', { credentials: { base_url: 'file:///tmp/api' } }],
+  ['numeric base URL', { credentials: { base_url: 42 } }],
+  ['invalid API key env', { credentials: { api_key_env: 'BAD-NAME' } }],
+  ['removed base URL env indirection', { credentials: { base_url_env: 'DEEPSEEK_BASE_URL' } }],
+  ['invalid search URL', { credentials: { search_base_url: 'not-a-url' } }],
+  ['invalid repair start policy', { repair: { start_policy: 'sometimes' } }],
+];
+
+for (const [name, override] of INVALID_CONFIGS) {
+  test(`config rejects ${name} before DSH starts`, async () => {
+    const root = await mkdtemp(join(tmpdir(), 'guardian-invalid-config-'));
+    try {
+      await writeFile(join(root, '.dsh-compat.yml'), stringify({ schema: 1, ...override }));
+      await assert.rejects(() => loadConfig(root), { code: 'CONFIG_INVALID' });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test('plugin workspace rejects a symlink that escapes the repository', async () => {
   const root = await mkdtemp(join(tmpdir(), 'guardian-workspace-root-'));

@@ -1,8 +1,21 @@
+- id: llm-deepseek
+  config:
+    apiKeyEnv: DEEPSEEK_API_KEY
+    baseURL: https://api.deepseek.com
+    retryPolicy:
+      mode: normal
+      maxRetries: 1
+
 - id: agent-default-model
   config:
     provider: deepseek-official
     model: deepseek-v4-flash-vision-exp
 
+- id: session-title-llm
+  disabled: true
+
 - id: web-search-deepseek
   config:
+    apiKeyEnv: DEEPSEEK_API_KEY
+    baseURL: https://api.deepseek.com/anthropic/v1
     model: deepseek-v4-flash-vision-exp

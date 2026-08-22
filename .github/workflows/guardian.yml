@@ -299,7 +299,7 @@ jobs:
     needs: [verify, candidate-model-smoke]
     if: >-
       always() &&
-      contains(fromJSON('["BLOCKED","BLOCKED_EXTERNAL"]'), needs.candidate-model-smoke.outputs.status)
+      contains(fromJSON('["BLOCKED","BLOCKED_CONFIG","BLOCKED_EXTERNAL"]'), needs.candidate-model-smoke.outputs.status)
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 15
     permissions:
@@ -397,14 +397,16 @@ jobs:
         working-directory: guardian
         run: npm ci
 
-      - name: Check for an unmerged campaign-state publication
+      - name: Check for an unmerged state or repair publication
         id: pending
         env:
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
-          branch="automation/dsh-compat/state/$safe_version"
-          if git -C target ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+          state_branch="automation/dsh-compat/state/$safe_version"
+          repair_branch="automation/dsh-compat/$safe_version"
+          if git -C target ls-remote --exit-code --heads origin "refs/heads/$state_branch" >/dev/null 2>&1 \
+            || git -C target ls-remote --exit-code --heads origin "refs/heads/$repair_branch" >/dev/null 2>&1; then
             echo 'pending=true' >> "$GITHUB_OUTPUT"
           else
             echo 'pending=false' >> "$GITHUB_OUTPUT"
@@ -547,7 +549,7 @@ jobs:
     needs: [verify, repair]
     if: >-
       always() &&
-      contains(fromJSON('["BLOCKED","BLOCKED_CONTRACT"]'), needs.repair.outputs.status)
+      contains(fromJSON('["BLOCKED","BLOCKED_CONFIG","BLOCKED_EXTERNAL","BLOCKED_CONTRACT"]'), needs.repair.outputs.status)
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 15
     permissions:

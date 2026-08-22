@@ -52,6 +52,19 @@ test('blocked report explains the next action without hiding the error code', ()
   assert.match(markdown, /MODEL_SMOKE_RPC/);
 });
 
+test('configuration blocker tells the user what to fix and promises no scheduled model loop', () => {
+  const markdown = renderMarkdown({
+    status: 'BLOCKED_CONFIG',
+    candidate: { version: '0.1.1-rc.2' },
+    steps: [],
+    error: { code: 'MODEL_CREDENTIAL_REJECTED', message: '模型服务拒绝了凭据（401/403）。' },
+  });
+  assert.match(markdown, /配置或凭据需要修正/);
+  assert.match(markdown, /Secret、base URL、model 或 provider/);
+  assert.match(markdown, /schedule 不会反复调模型/);
+  assert.match(markdown, /MODEL_CREDENTIAL_REJECTED/);
+});
+
 test('onboarding report explains why automatic repair does not start', () => {
   const markdown = renderMarkdown({
     status: 'BLOCKED',

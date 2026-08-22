@@ -102,15 +102,21 @@ Actions Summary、Issue 和 PR 默认使用中文，先给结论和下一步，�
 - 预算只剩 30% 时，默认给 repair DSH 发一次“尽快收敛”提醒，可关闭。
 - 确定性测试立即跑；只有确实要调模型修代码时，才可选等待 DeepSeek 低价时段。
 - 同一版本默认只自动维修一次。额度到顶后，只有提高限额，或把 `.dsh-compat.lock.json` 中 `resetBudget` 从 `N` 改成 `Y` 并提交，才再维修一次；该次 `Y` 会立即消费回 `N`。
-- timeout/429/5xx 不循环烧钱：只短重试一次，然后等手工运行、相关配置变化或新 DSH 版本。
+- 缺 Key、401/403、错误 model/base URL/provider 会产生可读的 `BLOCKED_CONFIG` 状态 PR；修正前 schedule 不会每 6 小时再调模型。
+- timeout/429/5xx 不循环烧钱：DSH provider 在同一模型回合内最多重试一次，仍失败则持久化为 `BLOCKED_EXTERNAL`。
+- 同目标的状态分支或维修 PR 尚未合并时，后续 schedule 在调模型前就停下，不会重复维修。
 
 CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSeek 账户账单级硬限额。绝对账户限额仍应在 provider 侧设置。
+
+`attempts_used` 记的是 Guardian 维修轮次，不是底层 HTTP 请求数。一个 DSH 回合可能包含流式续请求、工具回合或 provider 内部的一次短重试。
 
 ## 默认与可配置项
 
 - 候选 DSH：跟踪 NPM `latest`，即使根版本号未变但内部安装图变了也会复测。
 - repair DSH：默认固定 `0.1.1-rc.2`，可改；每次 campaign 开始后锁定。
-- provider/model：默认 `deepseek-official/deepseek-v4-flash-vision-exp`，可改 `base_url`、Secret 环境变量名和 model ID。
+- provider/model：默认 `deepseek-official/deepseek-v4-flash-vision-exp`。已实测支持自定义 DeepSeek `base_url`、Key 值、Key 环境变量引用和 model ID；Guardian 会直接 patch DSH 原生 `llm-deepseek` adapter。
+- GitHub Secret：默认只需建立 `DEEPSEEK_API_KEY`。`.dsh-compat.yml` 的 `api_key_env` 是 DSH 进程内的凭据引用，不是 GitHub Secret 的名字；仓库用别的 Secret 名时，只改薄 workflow 中 `deepseek_api_key` 的 Secret 映射。
+- 其他 provider：只填一个 provider 字符串不会自动安装 adapter。V1 只对 `deepseek-official` 路由做自动配置；其他 provider 必须已在所选 DSH profile 中注册，否则会停在 `MODEL_PROVIDER_NOT_REGISTERED`。
 - DeepSeek 官方搜索：repair DSH 可按需使用，不要求每轮搜，不另设搜索次数上限。
 - monorepo：用 `plugin.workspace` 指向真实插件 package；仓库依赖安装和 gates 仍在 root 运行。
 - 通知：GitHub Summary/Issue 内置；email、Telegram 和 webhook 是可选窄网关。

@@ -5,6 +5,7 @@ import {
   addUsage,
   budgetState,
   campaignEpoch,
+  modelInputUnchangedAfterPush,
   recordCampaign,
   repairCampaignGate,
   shouldSendConvergeMessage,
@@ -93,6 +94,33 @@ test('external blockers stay frozen on schedules and reopen on an explicit manua
   assert.equal(repairCampaignGate({
     lock, target: 'next', budget, maxAttempts: 2, startPolicy: 'immediate', pricing, trigger: 'workflow_dispatch',
   }).status, 'READY');
+});
+
+test('config blockers freeze schedules, while config pushes and manual runs are explicit recovery signals', () => {
+  const lock = { campaigns: { next: { status: 'BLOCKED_CONFIG' } } };
+  assert.equal(repairCampaignGate({
+    lock, target: 'next', budget, maxAttempts: 2, startPolicy: 'immediate', pricing, trigger: 'schedule',
+  }).status, 'FROZEN');
+  assert.equal(repairCampaignGate({
+    lock, target: 'next', budget, maxAttempts: 2, startPolicy: 'immediate', pricing, trigger: 'push',
+  }).status, 'READY');
+  assert.equal(repairCampaignGate({
+    lock, target: 'next', budget, maxAttempts: 2, startPolicy: 'immediate', pricing, trigger: 'workflow_dispatch',
+  }).status, 'READY');
+});
+
+test('an unmerged state or repair publication freezes before any repair budget is used', () => {
+  assert.deepEqual(repairCampaignGate({
+    lock: { campaigns: {} }, target: 'next', budget, maxAttempts: 2, startPolicy: 'immediate', pricing,
+    pendingPublication: true,
+  }), { status: 'FROZEN', reason: 'state-publication-pending', reset: null });
+});
+
+test('merging only the blocked lock does not turn the push event into another model run', () => {
+  const previous = { status: 'BLOCKED_CONFIG', input_fingerprint: 'same-input' };
+  assert.equal(modelInputUnchangedAfterPush(previous, 'same-input', 'push'), true);
+  assert.equal(modelInputUnchangedAfterPush(previous, 'changed-route-or-contract', 'push'), false);
+  assert.equal(modelInputUnchangedAfterPush(previous, 'same-input', 'workflow_dispatch'), false);
 });
 
 test('30 percent convergence edge fires once and every hard limit is explicit', () => {

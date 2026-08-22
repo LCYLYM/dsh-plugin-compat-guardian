@@ -45,17 +45,16 @@ repair:
     # 默认提示词建议按需搜索官方标准/文档/源码；Guardian 不设置搜索专属次数上限。
 
 credentials:
-  # 这些是可配置的 env 引用；workflow 将同名 GitHub Actions secrets 映射给 DSH。
+  # api_key_env 是 DSH 进程内的凭据引用，不是 GitHub Secret 名。
+  # 薄 workflow 默认把 secrets.DEEPSEEK_API_KEY 作为值传入；如用别的 Secret，只改 workflow 映射。
   # candidate 默认拿不到 key；只有已审核 contract 明确 requires_model_turn: true 时，
   # 才会在独立 smoke step 中临时使用同一个 Secret。
   api_key_env: DEEPSEEK_API_KEY
-  # 可选；留空时使用 DSH/provider 的默认端点。这里写出普通模型的官方默认值方便理解。
+  # 必须是完整 http(s) URL；默认是 DeepSeek 官方端点。
   base_url: https://api.deepseek.com
-  base_url_env: DEEPSEEK_BASE_URL
   # 搜索使用 Anthropic 兼容端点，不自动复用 DEEPSEEK_BASE_URL。
   # 注意 rc.2 会自行追加 /messages，因此这里必须包含 /v1；不要直接填到 /anthropic 为止。
   search_base_url: https://api.deepseek.com/anthropic/v1
-  search_base_url_env: DEEPSEEK_SEARCH_BASE_URL
 
 plugin:
   workspace: .
@@ -72,7 +71,7 @@ smoke:
   # 是否需要一次真实模型回合由已审核 contract 的 requires_model_turn 控制，默认 false。
   # contract 中 model_turn_scope 默认 candidate-only，可选 differential。
   # fixture_mode 默认 fixed，也可选 agent-selected；动态选中的文件会在本 campaign 内冻结。
-  # 缺少所需 Secret 时结果是 BLOCKED；V1 不建设 ephemeral proxy。
+  # 缺少所需 Secret 时结果是 BLOCKED_CONFIG；V1 不建设 ephemeral proxy。
 
 gates:
   repository:

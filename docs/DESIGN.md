@@ -44,7 +44,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D2 | 只追踪 NPM `latest` 并最终收敛到最新；不为每个中间发布排队。 |
 | D3 | candidate 与 repair runner 是两个隔离角色；candidate 永远无 Git 写权限，默认也无模型凭据。只有已审核 smoke contract 明确要求真实模型回合时，candidate 才在单独固定 smoke step 临时获得仓库配置的模型 Secret。 |
 | D4 | repair DSH 默认 `0.1.1-rc.2`（项目立项时 NPM `latest`），允许配置为其他固定版、`latest` 或 `target`；每轮开始时解析成精确制品并冻结。 |
-| D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`；provider id、base URL、key 环境引用和 model id 均可覆盖，失败不得静默换 route。 |
+| D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`；该原生 adapter 的 base URL、key 环境引用和 model id 可覆盖。其他 provider 需已在 DSH profile 注册，失败不得静默换 route。 |
 | D6 | 视觉由所选模型的图片输入能力提供；DeepSeek 联网搜索是 DSH 的独立 search provider 调用，不把两者混称为一个能力。 |
 | D7 | onboarding 由 DSH 自动发现 smoke surface，用户可给自然语言 hints；用户只需审核首次 onboarding PR，contract 变化另开 PR。 |
 | D8 | 兼容结论必须是差分测试和机器断言；repair agent 的文字声明不算 PASS，也不能在同一维修中改弱 contract。 |
@@ -76,7 +76,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock，避免下次重复测试；简短报告放 PR/Issue/Actions Summary，lock 保存其 URL，不在仓库增加逐版本报告文件。交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码。 |
 | D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
 | D36 | DeepSeek 官方搜索默认允许且由 repair DSH 按需使用；默认提示词建议把官方标准、文档和源码作为辅助证据。Guardian 不设置搜索次数/uses 专属上限，搜索仍受整体 60 分钟运行边界和 provider 自身限制。 |
-| D37 | candidate 默认不调用模型。只有 onboarding 已审核的 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 执行一次固定真实回合；usage 计入同一 campaign，缺 key 为 `BLOCKED`。V1 不建设 ephemeral proxy。 |
+| D37 | candidate 默认不调用模型。只有 onboarding 已审核的 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 执行一次固定真实回合；usage 计入同一 campaign，缺 key 为 `BLOCKED_CONFIG`。V1 不建设 ephemeral proxy。 |
 | D38 | 真实模型 smoke 只按本轮冻结输入与可重复机械证据判定：插件实际处理输入、所需附件/图片进入模型请求、provider 成功返回且 DSH 收到非空结果。不得匹配具体回答措辞或主观质量；用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。 |
 | D39 | 真实模型 smoke 默认 `candidate-only`：只对目标 DSH 调用一次，沿用“插件当前本来可用”的假设；contract 可选 `differential`，再对已验证旧 DSH 调同一输入。发生 repair 后必须在目标 DSH 上重跑；完全相同的 DSH 快照、插件树与输入自动去重。 |
 | D40 | candidate 真实模型 smoke 属于兼容检测，发现候选后立即执行，不等待峰谷价格；只有确认需要修改代码的 repair DSH 默认等待低价窗口。 |
@@ -218,7 +218,7 @@ npx dsh-plugin-compat-guardian onboard
 
 该命令只在临时目录和新分支工作，使用本地环境中已有的 DSH provider 配置做 smoke discovery，绝不把 key/base URL 值写入文件、日志或 PR。已登录 `gh` 时自动打开 onboarding PR；没有 `gh` 时保留生成分支并输出可复制的 push/PR 命令。NPM 名称是当前设计名称，发布前仍需实际发布回读，不能因为 2026-08-21 查询为空就声称已经占有。
 
-installer 会检查仓库所需 Secret 是否存在，但读不到也不回显值；缺少时只给出一次性的 `gh secret set DEEPSEEK_API_KEY`、可选 base/search URL 和通知 Secret 指引。用户可以先合并无模型 contract，缺 key 的真实模型 smoke 会按既有规则 `BLOCKED`，不会伪造 PASS。onboarding PR 合并后，日常探测、维修和交付全部在 GitHub Actions 内运行，不要求本地常驻进程。
+installer 会检查仓库所需 Secret 是否存在，但读不到也不回显值；缺少时只给出一次性的 `gh secret set DEEPSEEK_API_KEY`、可选 base/search URL 和通知 Secret 指引。用户可以先合并无模型 contract，缺 key 的真实模型 smoke 会按既有规则 `BLOCKED_CONFIG`，不会伪造 PASS。onboarding PR 合并后，日常探测、维修和交付全部在 GitHub Actions 内运行，不要求本地常驻进程。
 
 首次安装会生成 onboarding PR，内容限定为：
 
@@ -274,7 +274,7 @@ G0–G4、G6、G7 始终按上述差分执行。G5 的真实模型调用默认�
 | G2 安装生命周期 | fresh `DSH_HOME` 中真实 pack/add、dump-config、remove、再次 dump。 |
 | G3 真实启动 | 动态端口启动真实 `dsh web`/headless，HTTP 与进程生命周期正常。 |
 | G4 插件行为 | 至少一个插件专属 CLI/API/浏览器断言，不只检查首页 200。 |
-| G5 模型/视觉（contract 要求时） | 立即执行本轮冻结输入的真实模型回合；默认 candidate-only，可选 differential。断言插件处理、请求中的真实附件/图片、provider 成功和 DSH 非空结果，不匹配回答措辞或主观质量。缺 key 为 `BLOCKED`，外部错误重试一次后为 `BLOCKED_EXTERNAL`。 |
+| G5 模型/视觉（contract 要求时） | 立即执行本轮冻结输入的真实模型回合；默认 candidate-only，可选 differential。断言插件处理、请求中的真实附件/图片、provider 成功和 DSH 非空结果，不匹配回答措辞或主观质量。缺 key 为 `BLOCKED_CONFIG`，外部错误重试一次后为 `BLOCKED_EXTERNAL`。 |
 | G6 清理与幂等 | 端口释放、进程回收、重复安装/卸载不污染下一轮。 |
 | G7 交付安全 | 保护路径 denylist、secret scan、contract digest 和报告 schema 均通过。 |
 
@@ -302,7 +302,7 @@ $RUNNER_TEMP/dsh-compat/<event-key>/<attempt>/
 ```
 
 - candidate 永远不获得 Git 写 token、可复用的 `.git` 凭据或 Docker socket，默认也不获得模型 key。
-- 唯一例外是已审核 smoke contract 明确 `requires_model_turn: true`：Guardian 只在每个 contract 要求的独立 smoke step 中临时注入仓库配置的同一个 provider/model/Secret，并把 usage 计入当前 `repository + target version` campaign。默认只有 candidate 一步；选择 differential 时旧 DSH 另有一步。缺 key 直接标记 `BLOCKED`，不假装完成。
+- 唯一例外是已审核 smoke contract 明确 `requires_model_turn: true`：Guardian 只在每个 contract 要求的独立 smoke step 中临时注入仓库配置的同一个 provider/model/Secret，并把 usage 计入当前 `repository + target version` campaign。默认只有 candidate 一步；选择 differential 时旧 DSH 另有一步。缺 key 直接标记 `BLOCKED_CONFIG`，不假装完成。
 - 该固定 smoke step 中 candidate 进程能够接触模型 Secret，这是不用额外代理服务的明确取舍；V1 不建设 `ephemeral-proxy`，也不声称能在进程内隐藏 key。
 - repair DSH 只获得 DSH 原生 provider/settings/credentials 所需的模型凭据和受限 worktree。
 - model campaign 只能绑定可信默认分支 SHA，并由该 SHA 上的 `schedule`、`workflow_dispatch` 或默认分支 `push` 触发；普通 PR、fork PR、检出 PR 代码的 `pull_request_target` 和用户传入的任意 ref 都不能注入模型 Secret。
@@ -321,7 +321,9 @@ provider:   deepseek-official
 model:      deepseek-v4-flash-vision-exp
 ```
 
-这些只是仓库可覆盖的默认值，不是引擎常量。用户可以配置 DSH 已支持的 provider id、base URL、API key 环境变量引用和 wire model id。无论用户填固定版本、`latest` 还是 `target`，campaign 开始后都解析并记录实际 DSH version/integrity/install graph、provider、base URL identity 和 model；后续轮次不允许漂移，失败也不静默回退到另一个 route。Guardian 不再实现一层 provider 协议。
+这些只是仓库可覆盖的默认值，不是引擎常量。V1 会把 DeepSeek `baseURL` 和 `apiKeyEnv` 直接写入 DSH 原生 `llm-deepseek` patch，因此自定义 base URL、Key 引用和 wire model id 是真实生效的，不再只设环境变量等 DSH 猜。其他 provider id 仍必须已由所选 DSH profile 注册；Guardian 不会因为一个字符串就自动安装/配置 adapter，也不自造 provider 协议。未注册、错误凭据、model 或 URL 分别持久化为稳定错误代码，不静默回退。
+
+Guardian 为 `llm-deepseek` 设置 `retryPolicy.maxRetries: 1`，并禁用与兼容结论无关的 LLM 会话标题生成，避免计费外请求。这意味着 timeout/429/5xx 的主模型请求最多有一次 provider 重试；`attempts_used` 仍表示 Guardian 维修轮次，不是 HTTP 请求计数。
 
 当前官方 DSH 发布制品已把默认模型声明为 `inputModalities: [text, image]`，所以 repair agent 可以直接查看失败截图、页面渲染、图表或插件 UI，而不需要另造视觉 sidecar。
 
@@ -357,7 +359,7 @@ repair DSH 默认可以搜索，不要求每次维修都搜。默认提示词建
 
 ## 12. Campaign 预算
 
-预算范围固定为 `repository + target root DSH version`，并跨 Actions rerun、schedule、candidate 模型 smoke（含一次外部错误重试）、repair attempt 和通知重试累积：
+预算范围固定为 `repository + target root DSH version`，并跨 Actions rerun、schedule、candidate 模型 smoke（含 provider 内一次外部错误重试）、repair attempt 和通知重试累积：
 
 ```text
 hard stop = token / CNY / wall time / attempt 任一启用上限耗尽

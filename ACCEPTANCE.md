@@ -9,7 +9,7 @@
 - R5 [pass] 兼容失败时由 repair DSH 在受限 worktree 中诊断和修复，并由无共享结论权的 verifier 重新执行原套验收；surface: 隔离 worktree/branch；evidence: 失败复现、修复 diff、未被弱化的回归结果。
 - R6 [pass] 预算按 `repository + target DSH version` 的整个 campaign 累计，不在每个 Actions run 重置；累计 DSH/DeepSeek 暴露的 token usage，并按版本化价格表估算人民币，另设墙钟上限，剩余 30% 时可选 steer 收敛；surface: 预算账本与控制事件；evidence: 跨 run 累计、单次阈值消息、基于已报告 usage 的硬停止和价格映射版本测试。
 - R7 [pass] 每个目标 DSH 版本只自动启动一个有界 campaign；失败后冻结，定时触发不再调模型，直到收到明确新信号；surface: 状态机、campaign Issue 和 Actions concurrency；evidence: 重放、重复事件、失败冻结和自身提交测试。
-- R8 [partial] repair DSH 直接使用它自身支持的 provider/settings/credential 契约；仓库可配置 provider id、base URL、key 的环境变量引用和 model id，API key 仅由仓库 secret 或原生 CI 身份注入，不写入日志、报告或 commit；surface: DSH 原生 provider 与 CI secret 边界；evidence: 默认与自定义 route 的真实请求、usage 事件、secret 扫描与脱敏测试。
+- R8 [partial] repair DSH 直接使用它自身支持的 provider/settings/credential 契约；默认 `deepseek-official` 可配置 base URL、key 环境变量引用和 model id，其他 provider id 必须已在所选 DSH profile 注册，Guardian 不自动安装 adapter；API key 仅由仓库 secret 或原生 CI 身份注入，不写入日志、报告或 commit；surface: DSH 原生 provider 与 CI secret 边界；evidence: 默认与自定义 DeepSeek route 的真实请求、usage 事件、secret 扫描与脱敏测试。
 - R9 [pass] V1 通过 onboarding PR 安装到当前插件仓库，不引入中央托管、GitHub App 多仓库控制面或 `gh-aw` 运行时依赖；surface: 薄 workflow + reusable workflow/orchestrator；evidence: 在一个真实插件仓库中从安装到运行的闭环。
 - R10 [partial] onboarding 时由 DSH 从 manifest、源码、README 和现有测试自动发现 smoke surface，接受用户提示，生成机器可执行契约供用户首次审核；surface: `.dsh-compat.yml` 与 `compat/smoke.*`；evidence: 已审核契约、覆盖范围报告和“维修过程不得改 onboarding contract/verifier”回归。
 - R11 [partial] 支持 `pull-request`（默认）、`auto-merge` 和显式开启的 `direct-push`；三种模式均由独立 publisher 持写凭据，不由 repair DSH 直接 push；surface: GitHub branch/PR/default branch；evidence: 权限隔离、branch protection 失败和三模式端到端测试。
@@ -36,7 +36,7 @@
 - R32 [pass] candidate 无需修复即 PASS 时仍必须提交精确 verified lock，按既有 pull-request/auto-merge/direct-push 模式交付且不得改插件代码；详细报告放 PR/Issue/Actions Summary，lock 持久化 URL，不能以临时 artifact 代替 durable verified 状态；surface: lock/report/publisher；evidence: 三种模式的无代码 PASS 提交、报告链接回读与下一次轮询 NOOP。
 - R33 [pass] 默认 campaign 限额为 1,000,000 总 token、估算 10 CNY、60 分钟实际 repair/verifier 运行时间和 2 个 repair attempt，任一先耗尽即停止；30% 剩余提醒默认开启且只发一次，等待低价窗口不计时；surface: budget ledger/state machine/model request gate；evidence: 四种单独耗尽、跨 run 累计、一次 steer、等待不计时和单请求尾差测试。
 - R34 [partial] repair DSH 默认可按需使用 DeepSeek 官方搜索，提示词建议优先查官方标准、文档、源码和 NPM 元数据作为辅助；Guardian 不配置搜索专属调用/uses 上限，搜索不可用只记录且不静默换模型、不替代 verifier、不单独判兼容失败，整体运行墙钟和 provider 限制仍有效；surface: repair prompt/search provider/report；evidence: 使用、不使用、不可用和无静默回退四类真实运行记录。
-- R35 [pass] candidate 默认不得获得模型凭据；只有 onboarding 已审核 contract 声明 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 临时注入仓库同一套 provider/model/Secret 并执行一次固定真实回合，usage 计入同一 `repository + target version` campaign，缺 key 必须为 `BLOCKED`；V1 不建设 ephemeral proxy，普通 PR/fork/任意 ref 仍不得获得 secret；surface: smoke contract/job permissions/budget ledger；evidence: 默认无 key、显式真实回合、缺 key、PR secret 拒绝和 usage 累计五类运行记录。
+- R35 [pass] candidate 默认不得获得模型凭据；只有 onboarding 已审核 contract 声明 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 临时注入仓库同一套 provider/model/Secret 并执行一次固定真实回合，usage 计入同一 `repository + target version` campaign，缺 key 必须为可持久化冻结的 `BLOCKED_CONFIG`；V1 不建设 ephemeral proxy，普通 PR/fork/任意 ref 仍不得获得 secret；surface: smoke contract/job permissions/budget ledger；evidence: 默认无 key、显式真实回合、缺 key、PR secret 拒绝和 usage 累计五类运行记录。
 - R36 [pass] contract-required 真实模型 smoke 只能按本轮冻结输入和可重复机械事实判定：插件处理输入、声明附件/图片进入模型请求、provider 成功、DSH 消费非空结果；不得匹配具体回答措辞或主观质量。用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改；surface: smoke contract/request trace/verifier；evidence: 随机措辞仍 PASS、附件未进入请求 FAIL、空结果 FAIL 和 contract 防篡改测试。
 - R37 [partial] 真实模型 smoke 默认只对 candidate 执行；onboarding contract 可选 differential，使已验证旧 DSH 和 candidate 使用同一冻结输入各执行一次。repair 后必须在 candidate 重跑，完全相同的 DSH 快照、插件树、contract 和输入 hash 必须去重；surface: smoke contract/verifier/cache key；evidence: candidate-only、differential、repair rerun 和 dedupe 四类记录。
 - R38 [pass] contract-required candidate 模型 smoke 必须随兼容检测立即执行，不等待低价窗口；只有 repair DSH 默认等待价格窗口；surface: scheduler/state/report；evidence: 高峰时 candidate smoke 立即完成而 repair 进入 WAITING_FOR_PRICE。
@@ -53,7 +53,9 @@
 - R49 [pass] 默认 runner 必须为 `ubuntu-24.04`，允许仓库覆盖一个 runner label，并把实际 OS/label 写入 verified tuple；V1 不自动展开 OS matrix；surface: thin/reusable workflow/config/report；evidence: 默认 runner、单覆盖和无 matrix workflow 回读。
 - R50 [pass] `npx dsh-plugin-compat-guardian onboard` 必须只在临时区和新分支生成 onboarding 内容，使用本地 provider 环境但不持久化凭据；有已认证 `gh` 时打开 PR，无 `gh` 时保留分支并输出精确命令，绝不能直接写默认分支；surface: CLI/temp DSH_HOME/git/gh；evidence: 有无 gh 两条真实路径、默认分支零 diff 和 secret 扫描。
 - R51 [partial] publisher 默认使用仓库 `GITHUB_TOKEN` 并在缺少创建 PR 权限或 checks 等待批准时明确阻塞/等待；无人值守 auto-merge 可选细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`，只允许 publisher job 获得，repair/candidate/verifier 均不可见；V1 不强制额外 token 或 GitHub App；surface: workflow permissions/secrets/publisher；evidence: 默认 PR、等待批准、可选 token auto-merge 和三类非 publisher secret 拒绝。
+- R52 [open] 缺 Key、401/403、错误 model/base URL/provider 与不可达网络必须分类为可读且去敏的持久化阻塞状态；429、5xx、timeout 只允许当次立即重试一次，之后同版本 schedule 不再调模型，只在手工触发、路由配置改变或新目标版本后恢复；surface: repair/model-smoke lock、Actions Summary 和状态 PR；evidence: 八类故障回归与真实 DSH rc.2 本地 HTTP 故障端点。
+- R53 [open] repair/model-smoke 启动前必须同时检查同目标的 state 分支和维修分支/PR，任一未合并都直接冻结；自定义 DeepSeek base URL、key 变量引用和 model 必须通过 DSH 原生 `llm-deepseek` adapter patch 生效，无效 URL/环境变量名在启动前拒绝；surface: reusable workflow、DSH overlay 和 config loader；evidence: 未合并维修 PR 零模型调用、自定义 route 实请求和非法配置表驱动回归。
 
-Current slice: V1 实现完成；主链路公开真实 PASS，可选外部投递/PAT 及需真实上游事件的项目保持 partial
+Current slice: 凭据与防重复执行专项修复中；R52/R53 未达标前验收为 BLOCKED
 
 Project stage: V1 implemented and primary path validated
