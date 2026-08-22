@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/guardian-logo.png" width="180" alt="DSH Plugin Compatibility Guardian logo">
+  <img src="assets/guardian-logo-whale.png" width="180" alt="带 DeepSeek Harness 黑色鲸鱼标识的 DSH Plugin Compatibility Guardian Logo">
   <h1>DSH Plugin Compatibility Guardian</h1>
   <p><strong>让 DeepSeek Harness 插件自己跟上 DSH 更新。</strong></p>
   <p>自动发现新版 → 隔离安装与真实启动 → 不兼容时用 DSH 本身修复 → 独立复验 → 交付可合并 PR。</p>

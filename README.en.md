@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/guardian-logo.png" width="180" alt="DSH Plugin Compatibility Guardian logo">
+  <img src="assets/guardian-logo-whale.png" width="180" alt="DSH Plugin Compatibility Guardian logo with the black DeepSeek Harness whale mark">
   <h1>DSH Plugin Compatibility Guardian</h1>
   <p><strong>Let DeepSeek Harness plugins keep themselves compatible with DSH updates.</strong></p>
   <p>Detect a new release → install and boot it in isolation → repair with DSH when needed → independently verify → deliver a merge-ready PR.</p>
