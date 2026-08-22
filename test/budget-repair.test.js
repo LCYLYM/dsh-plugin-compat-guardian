@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { estimateCny, estimateRouteCny, priceBand, projectTokenUsage, readDshSearchTelemetry } from '../lib/budget.js';
+import { accumulateRouteCny, estimateCny, estimateRouteCny, priceBand, projectTokenUsage, readDshSearchTelemetry } from '../lib/budget.js';
 import { assertRepairPaths, repairDshArgs, repairResumeAllowed } from '../lib/repair.js';
 
 test('usage projection replaces duplicate chunk/message samples per step', () => {
@@ -39,6 +39,23 @@ test('price map applies peak and low-price rates in Asia/Shanghai', () => {
   assert.equal(estimateCny(usage, pricing, peakDate).amount, 12.1);
   assert.equal(priceBand(pricing, lowDate), 'low_price');
   assert.equal(estimateCny(usage, pricing, lowDate).amount, 6.05);
+});
+
+test('campaign CNY adds each run at its own price band instead of repricing history', () => {
+  const pricing = {
+    revision: 'test', timezone: 'Asia/Shanghai', peak_windows: [{ start: '09:00', end: '12:00' }],
+    applies_to: { provider: 'deepseek-official', model: 'official-model', base_url: 'https://api.deepseek.com' },
+    rates: {
+      peak: { input_cache_hit: 0.1, input_cache_miss: 3, output: 9 },
+      low_price: { input_cache_hit: 0.05, input_cache_miss: 1.5, output: 4.5 },
+    },
+  };
+  const route = pricing.applies_to;
+  const usage = { inputTokens: 1_000_000, outputTokens: 1_000_000, cacheReadTokens: 1_000_000, cacheWriteTokens: 0 };
+  const peak = accumulateRouteCny(null, usage, pricing, route, new Date('2026-08-22T02:00:00Z'));
+  const mixed = accumulateRouteCny(peak, usage, pricing, route, new Date('2026-08-22T05:00:00Z'));
+  assert.deepEqual(peak, { amount: 12.1, band: 'peak', revision: 'test', known: true });
+  assert.deepEqual(mixed, { amount: 18.15, band: 'mixed', revision: 'test', known: true });
 });
 
 test('CNY is unknown when the active provider route does not match the price map', () => {

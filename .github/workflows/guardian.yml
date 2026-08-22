@@ -195,7 +195,8 @@ jobs:
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
-          if git -C target ls-remote --exit-code --heads origin "refs/heads/automation/dsh-compat/state/$safe_version" >/dev/null 2>&1; then
+          if git -C target ls-remote --exit-code --heads origin "refs/heads/automation/dsh-compat/state/$safe_version" >/dev/null 2>&1 \
+            || git -C target ls-remote --exit-code --heads origin "refs/heads/automation/dsh-compat/$safe_version" >/dev/null 2>&1; then
             echo 'pending=true' >> "$GITHUB_OUTPUT"
           else
             echo 'pending=false' >> "$GITHUB_OUTPUT"
