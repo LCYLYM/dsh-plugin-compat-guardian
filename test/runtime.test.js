@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { GuardianError } from '../lib/errors.js';
-import { resolveNodeRuntime, resolvePackageManager } from '../lib/runtime.js';
+import { packageManagerInstallArgs, resolveNodeRuntime, resolvePackageManager } from '../lib/runtime.js';
 
 async function fixture(manifest = {}) {
   const path = await mkdtemp(join(tmpdir(), 'guardian-runtime-'));
@@ -64,4 +64,11 @@ test('package manager resolver blocks conflicting locks and Bun', async () => {
       rm(bun, { recursive: true, force: true }),
     ]);
   }
+});
+
+test('repository installs use each selected package manager frozen mode', () => {
+  assert.deepEqual(packageManagerInstallArgs({ name: 'npm', exactVersion: '11.0.0', lockfiles: ['package-lock.json'] }), ['ci']);
+  assert.deepEqual(packageManagerInstallArgs({ name: 'pnpm', exactVersion: '10.0.0', lockfiles: ['pnpm-lock.yaml'] }), ['install', '--frozen-lockfile']);
+  assert.deepEqual(packageManagerInstallArgs({ name: 'yarn', exactVersion: '1.22.0', lockfiles: ['yarn.lock'] }), ['install', '--frozen-lockfile']);
+  assert.deepEqual(packageManagerInstallArgs({ name: 'yarn', exactVersion: '4.0.0', lockfiles: ['yarn.lock'] }), ['install', '--immutable']);
 });

@@ -25,10 +25,25 @@ on:
       deepseek_api_key:
         description: DeepSeek key exposed only to the repair job after deterministic failure
         required: false
+      publisher_token:
+        description: Optional fine-grained token used only by publisher jobs
+        required: false
+      email_gateway_url:
+        description: Optional email gateway URL used only by notifier
+        required: false
+      telegram_bot_token:
+        description: Optional Telegram bot token used only by notifier
+        required: false
+      telegram_chat_id:
+        description: Optional Telegram chat id used only by notifier
+        required: false
+      notification_webhook_url:
+        description: Optional generic webhook URL used only by notifier
+        required: false
 
 concurrency:
   group: dsh-compat-${{ github.repository }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -40,6 +55,8 @@ jobs:
       status: ${{ steps.verify.outputs.status }}
       candidate_version: ${{ steps.verify.outputs.candidate_version }}
       error_code: ${{ steps.verify.outputs.error_code }}
+      model_smoke_required: ${{ steps.verify.outputs.model_smoke_required }}
+      repair_eligible: ${{ steps.verify.outputs.repair_eligible }}
     steps:
       - name: Validate immutable Guardian ref
         env:
@@ -102,9 +119,13 @@ jobs:
           status=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).status")
           candidate=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).candidate?.version ?? ''")
           error_code=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).error?.code ?? ''")
+          model_smoke_required=$(node -p "String(JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).modelSmokeRequired === true)")
+          repair_eligible=$(node -p "String(JSON.parse(require('fs').readFileSync(process.env.REPORT_DIRECTORY + '/report.json', 'utf8')).repairEligible === true)")
           echo "status=$status" >> "$GITHUB_OUTPUT"
           echo "candidate_version=$candidate" >> "$GITHUB_OUTPUT"
           echo "error_code=$error_code" >> "$GITHUB_OUTPUT"
+          echo "model_smoke_required=$model_smoke_required" >> "$GITHUB_OUTPUT"
+          echo "repair_eligible=$repair_eligible" >> "$GITHUB_OUTPUT"
           if [[ "$status" == 'PASS' ]]; then
             cp target/.dsh-compat.lock.json "$REPORT_DIRECTORY/verified-lock.json"
           fi
@@ -123,14 +144,103 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  publish:
+  candidate-model-smoke:
     needs: verify
-    if: needs.verify.result == 'success' && needs.verify.outputs.status == 'PASS'
+    if: needs.verify.result == 'success' && needs.verify.outputs.status == 'PASS' && needs.verify.outputs.model_smoke_required == 'true'
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.model-smoke.outputs.status }}
+    steps:
+      - name: Check out reviewed plugin and contract without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: false
+
+      - name: Check out pinned Guardian model-smoke runner
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ inputs.guardian_repository }}
+          ref: ${{ inputs.guardian_ref }}
+          path: guardian
+          persist-credentials: false
+
+      - name: Set up Node 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: Install Guardian model-smoke runner
+        working-directory: guardian
+        run: npm ci
+
+      - name: Download deterministic verified lock
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-${{ github.run_id }}
+          path: deterministic-evidence
+
+      - name: Check for an unmerged campaign-state publication
+        id: pending-model-state
+        env:
+          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
+        run: |
+          safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
+          if git -C target ls-remote --exit-code --heads origin "refs/heads/automation/dsh-compat/state/$safe_version" >/dev/null 2>&1; then
+            echo 'pending=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'pending=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run reviewed real model and visual smoke
+        id: model-smoke
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.deepseek_api_key }}
+          MODEL_SMOKE_DIRECTORY: ${{ runner.temp }}/guardian-model-smoke
+          GUARDIAN_TRIGGER: ${{ github.event_name }}
+          GUARDIAN_PENDING_PUBLICATION: ${{ steps.pending-model-state.outputs.pending }}
+        run: |
+          set +e
+          node guardian/bin/dsh-plugin-compat-guardian.js model-smoke \
+            --repo "$GITHUB_WORKSPACE/target" \
+            --dsh-version "${{ needs.verify.outputs.candidate_version }}" \
+            --base-lock "$GITHUB_WORKSPACE/deterministic-evidence/verified-lock.json" \
+            --output "$MODEL_SMOKE_DIRECTORY"
+          model_exit=$?
+          set -e
+          status=$(node -p "JSON.parse(require('fs').readFileSync(process.env.MODEL_SMOKE_DIRECTORY + '/report.json', 'utf8')).status")
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$model_exit"
+
+      - name: Upload sanitized model-smoke evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: dsh-guardian-model-smoke-${{ github.run_id }}
+          path: ${{ runner.temp }}/guardian-model-smoke
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: [verify, candidate-model-smoke]
+    if: >-
+      always() && needs.verify.result == 'success' && needs.verify.outputs.status == 'PASS' &&
+      (needs.candidate-model-smoke.result == 'skipped' || needs.candidate-model-smoke.outputs.status == 'PASS')
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       # actions/checkout v7.0.1, pinned 2026-08-22. Only this job receives write credentials.
       - name: Check out exact source for publication
@@ -138,6 +248,24 @@ jobs:
         with:
           path: target
           persist-credentials: true
+          token: ${{ secrets.publisher_token || github.token }}
+
+      - name: Check out pinned Guardian publisher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ inputs.guardian_repository }}
+          ref: ${{ inputs.guardian_ref }}
+          path: guardian
+          persist-credentials: false
+
+      - name: Set up publisher runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+
+      - name: Install Guardian publisher
+        working-directory: guardian
+        run: npm ci
 
       # actions/download-artifact v8.0.1, pinned 2026-08-22.
       - name: Download verified evidence
@@ -146,62 +274,89 @@ jobs:
           name: dsh-guardian-${{ github.run_id }}
           path: evidence
 
-      - name: Reject stale source and prepare one lock commit
-        id: prepare
+      - name: Download model-smoke ledger when enabled
+        if: needs.candidate-model-smoke.outputs.status == 'PASS'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-model-smoke-${{ github.run_id }}
+          path: model-smoke-evidence
+
+      - name: Use the model-smoke budget ledger
+        if: needs.candidate-model-smoke.outputs.status == 'PASS'
+        run: cp model-smoke-evidence/verified-lock.json evidence/verified-lock.json
+
+      - name: Publish using the repository-selected delivery mode
+        env:
+          GH_TOKEN: ${{ secrets.publisher_token || github.token }}
+          GUARDIAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          node guardian/bin/dsh-plugin-compat-guardian.js publish \
+            --repo "$GITHUB_WORKSPACE/target" \
+            --evidence "$GITHUB_WORKSPACE/evidence" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  publish-model-smoke-state:
+    needs: [verify, candidate-model-smoke]
+    if: >-
+      always() &&
+      contains(fromJSON('["BLOCKED","BLOCKED_EXTERNAL"]'), needs.candidate-model-smoke.outputs.status)
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check out exact source for model-smoke state publication
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: true
+          token: ${{ secrets.publisher_token || github.token }}
+
+      - name: Download blocked model-smoke evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-model-smoke-${{ github.run_id }}
+          path: model-smoke-evidence
+
+      - name: Publish one human-reviewed model-smoke state PR
         working-directory: target
         env:
+          GH_TOKEN: ${{ secrets.publisher_token || github.token }}
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
-          expected=$(node -p "JSON.parse(require('fs').readFileSync('../evidence/report.json', 'utf8')).source.commit")
-          actual=$(git rev-parse HEAD)
-          if [[ "$actual" != "$expected" ]]; then
-            echo "STALE_SOURCE: verified $expected but default branch is $actual" >&2
-            exit 2
-          fi
-          cp ../evidence/verified-lock.json .dsh-compat.lock.json
-          if git diff --quiet -- .dsh-compat.lock.json; then
-            echo 'changed=false' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
-          branch="automation/dsh-compat/$safe_version"
+          branch="automation/dsh-compat/state/$safe_version"
           if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
-            echo "Guardian branch $branch already exists; waiting for its existing PR instead of publishing again."
-            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo "model-smoke state already waits on $branch"
             exit 0
           fi
+          cp ../model-smoke-evidence/blocked-lock.json .dsh-compat.lock.json
           git config user.name 'dsh-compat-guardian[bot]'
           git config user.email 'dsh-compat-guardian[bot]@users.noreply.github.com'
           git switch -c "$branch"
           git add .dsh-compat.lock.json
-          git commit -m "ci: verify DSH $CANDIDATE_VERSION compatibility"
+          git commit -m "ci: freeze blocked DSH $CANDIDATE_VERSION model smoke"
           git push --set-upstream origin "$branch"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-
-      - name: Open the default human-reviewed PR
-        if: steps.prepare.outputs.changed == 'true'
-        working-directory: target
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ steps.prepare.outputs.branch }}
-          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
-        run: |
           gh pr create \
-            --head "$BRANCH" \
-            --title "ci: support DSH $CANDIDATE_VERSION" \
-            --body-file ../evidence/report.md
+            --head "$branch" \
+            --title "ci: record blocked DSH $CANDIDATE_VERSION model smoke" \
+            --body "The reviewed real model/visual smoke stopped. Merge this machine-state PR to freeze schedule retries. Manual dispatch or a provider/contract configuration commit may try the same smoke once without resetting repair budget. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   repair:
     needs: verify
     if: >-
       needs.verify.result == 'success' &&
       needs.verify.outputs.status == 'BLOCKED' &&
+      needs.verify.outputs.repair_eligible == 'true' &&
       contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED"]'), needs.verify.outputs.error_code)
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 75
     permissions:
       contents: read
+    outputs:
+      status: ${{ steps.repair.outputs.status }}
+      error_code: ${{ steps.repair.outputs.error_code }}
     steps:
       # No write credential is persisted in the model-running checkout.
       - name: Check out failed plugin source without write credentials
@@ -241,19 +396,40 @@ jobs:
         working-directory: guardian
         run: npm ci
 
+      - name: Check for an unmerged campaign-state publication
+        id: pending
+        env:
+          CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
+        run: |
+          safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
+          branch="automation/dsh-compat/state/$safe_version"
+          if git -C target ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            echo 'pending=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'pending=false' >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run bounded repair DSH and independent verifier
+        id: repair
         env:
           DEEPSEEK_API_KEY: ${{ secrets.deepseek_api_key }}
           REPAIR_DIRECTORY: ${{ runner.temp }}/guardian-repair
+          GUARDIAN_PENDING_PUBLICATION: ${{ steps.pending.outputs.pending }}
+          GUARDIAN_REPAIR_NOW: ${{ github.event_name == 'workflow_dispatch' }}
+          GUARDIAN_TRIGGER: ${{ github.event_name }}
         run: |
-          if [[ -z "$DEEPSEEK_API_KEY" ]]; then
-            echo 'MODEL_CREDENTIAL_MISSING: configure the repository DEEPSEEK_API_KEY secret' >&2
-            exit 2
-          fi
+          set +e
           node guardian/bin/dsh-plugin-compat-guardian.js repair \
             --repo "$GITHUB_WORKSPACE/target" \
             --failure-report "$GITHUB_WORKSPACE/failure-evidence/report.json" \
             --output "$REPAIR_DIRECTORY"
+          repair_exit=$?
+          set -e
+          status=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPAIR_DIRECTORY + '/report.json', 'utf8')).status")
+          error_code=$(node -p "JSON.parse(require('fs').readFileSync(process.env.REPAIR_DIRECTORY + '/report.json', 'utf8')).error?.code ?? ''")
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "error_code=$error_code" >> "$GITHUB_OUTPUT"
+          exit "$repair_exit"
 
       - name: Upload sanitized repair proposal and verifier evidence
         if: always()
@@ -266,18 +442,37 @@ jobs:
 
   publish-repair:
     needs: [verify, repair]
-    if: needs.repair.result == 'success'
+    if: needs.repair.result == 'success' && needs.repair.outputs.status == 'PASS'
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - name: Check out exact failed source for publication
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: target
           persist-credentials: true
+          token: ${{ secrets.publisher_token || github.token }}
+
+      - name: Check out pinned Guardian publisher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ inputs.guardian_repository }}
+          ref: ${{ inputs.guardian_ref }}
+          path: guardian
+          persist-credentials: false
+
+      - name: Set up publisher runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+
+      - name: Install Guardian publisher
+        working-directory: guardian
+        run: npm ci
 
       - name: Download verified repair proposal
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -285,53 +480,121 @@ jobs:
           name: dsh-guardian-repair-${{ github.run_id }}
           path: repair-evidence
 
-      - name: Recheck source and publish one repair commit
-        id: prepare
+      - name: Publish verified repair using the repository-selected delivery mode
+        env:
+          GH_TOKEN: ${{ secrets.publisher_token || github.token }}
+          GUARDIAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          node guardian/bin/dsh-plugin-compat-guardian.js publish \
+            --repo "$GITHUB_WORKSPACE/target" \
+            --evidence "$GITHUB_WORKSPACE/repair-evidence" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  publish-contract-proposal:
+    needs: [verify, repair]
+    if: always() && needs.repair.outputs.status == 'BLOCKED_CONTRACT'
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out exact failed source for contract proposal
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: true
+          token: ${{ secrets.publisher_token || github.token }}
+
+      - name: Download isolated contract proposal
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-repair-${{ github.run_id }}
+          path: repair-evidence
+
+      - name: Open a contract-only, always-human-reviewed PR
         working-directory: target
         env:
+          GH_TOKEN: ${{ secrets.publisher_token || github.token }}
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
           expected=$(node -p "JSON.parse(require('fs').readFileSync('../repair-evidence/report.json', 'utf8')).source.commit")
           actual=$(git rev-parse HEAD)
           if [[ "$actual" != "$expected" ]]; then
-            echo "STALE_SOURCE: repaired $expected but default branch is $actual" >&2
+            echo "STALE_SOURCE: contract proposal used $expected but default branch is $actual" >&2
             exit 2
           fi
-          git apply --index ../repair-evidence/repair.patch
-          cp ../repair-evidence/verified-lock.json .dsh-compat.lock.json
-          git add .dsh-compat.lock.json
-          while IFS= read -r path; do
-            case "$path" in
-              .github/workflows/*|.dsh-compat.yml|compatibility/*)
-                echo "PROTECTED_PATH_CHANGED: $path" >&2
-                exit 2
-                ;;
-            esac
-          done < <(git diff --cached --name-only)
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
-          branch="automation/dsh-compat/$safe_version"
+          branch="automation/dsh-compat/contract/$safe_version"
           if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
-            echo "repair branch $branch already exists" >&2
-            exit 2
+            echo "contract proposal already waits on $branch"
+            exit 0
           fi
+          cp ../repair-evidence/contract-proposal.yml compatibility/dsh-smoke.yml
           git config user.name 'dsh-compat-guardian[bot]'
           git config user.email 'dsh-compat-guardian[bot]@users.noreply.github.com'
           git switch -c "$branch"
-          git commit -m "fix: support DSH $CANDIDATE_VERSION"
+          git add compatibility/dsh-smoke.yml
+          test "$(git diff --cached --name-only)" = 'compatibility/dsh-smoke.yml'
+          git commit -m "test: propose DSH $CANDIDATE_VERSION smoke contract update"
           git push --set-upstream origin "$branch"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          gh pr create \
+            --head "$branch" \
+            --title "test: review DSH $CANDIDATE_VERSION smoke contract" \
+            --body "Guardian could not honestly repair code under the current reviewed smoke contract. This PR changes only the contract and always requires human review; auto-merge and direct-push are intentionally ignored. Merging reruns the full gate without resetting already consumed repair budget. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
-      - name: Open the verified human-reviewed repair PR
+  publish-blocked-state:
+    needs: [verify, repair]
+    if: >-
+      always() &&
+      contains(fromJSON('["BLOCKED","BLOCKED_CONTRACT"]'), needs.repair.outputs.status)
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check out exact failed source for state publication
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: true
+
+      - name: Download blocked repair evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-repair-${{ github.run_id }}
+          path: repair-evidence
+
+      - name: Publish one human-reviewed blocked-state PR
         working-directory: target
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ steps.prepare.outputs.branch }}
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
+          expected=$(node -p "JSON.parse(require('fs').readFileSync('../repair-evidence/report.json', 'utf8')).source.commit")
+          actual=$(git rev-parse HEAD)
+          if [[ "$actual" != "$expected" ]]; then
+            echo "STALE_SOURCE: blocked repair used $expected but default branch is $actual" >&2
+            exit 2
+          fi
+          safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
+          branch="automation/dsh-compat/state/$safe_version"
+          if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            echo "blocked campaign state already waits on $branch"
+            exit 0
+          fi
+          cp ../repair-evidence/blocked-lock.json .dsh-compat.lock.json
+          git config user.name 'dsh-compat-guardian[bot]'
+          git config user.email 'dsh-compat-guardian[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add .dsh-compat.lock.json
+          git commit -m "ci: freeze blocked DSH $CANDIDATE_VERSION campaign"
+          git push --set-upstream origin "$branch"
           gh pr create \
-            --head "$BRANCH" \
-            --title "fix: support DSH $CANDIDATE_VERSION" \
-            --body-file ../repair-evidence/repair-report.md
+            --head "$branch" \
+            --title "ci: freeze blocked DSH $CANDIDATE_VERSION campaign" \
+            --body "Automatic repair for DSH $CANDIDATE_VERSION stopped. Merge this machine-state PR so schedules stay frozen. To authorize one more repair after merging, change resetBudget from N to Y or increase a campaign limit. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
   unsupported-failure:
     needs: verify
@@ -348,3 +611,78 @@ jobs:
         run: |
           echo "Guardian will not spend model budget on failure class: $ERROR_CODE" >&2
           exit 2
+
+  notify:
+    needs: [verify, candidate-model-smoke, publish-model-smoke-state, repair, publish, publish-repair, publish-contract-proposal, publish-blocked-state, unsupported-failure]
+    if: always()
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out plugin configuration without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: target
+          persist-credentials: false
+
+      - name: Check out pinned Guardian notifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ${{ inputs.guardian_repository }}
+          ref: ${{ inputs.guardian_ref }}
+          path: guardian
+          persist-credentials: false
+
+      - name: Set up notifier runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+
+      - name: Install Guardian notifier
+        working-directory: guardian
+        run: npm ci
+
+      - name: Download verifier report
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-${{ github.run_id }}
+          path: notification-evidence/verify
+
+      - name: Download repair report when one exists
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-repair-${{ github.run_id }}
+          path: notification-evidence/repair
+
+      - name: Download candidate model-smoke report when one exists
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: dsh-guardian-model-smoke-${{ github.run_id }}
+          path: notification-evidence/model-smoke
+
+      - name: Write run summary and send each stable event once
+        env:
+          GH_TOKEN: ${{ secrets.publisher_token || github.token }}
+          GUARDIAN_EMAIL_GATEWAY_URL: ${{ secrets.email_gateway_url }}
+          GUARDIAN_TELEGRAM_BOT_TOKEN: ${{ secrets.telegram_bot_token }}
+          GUARDIAN_TELEGRAM_CHAT_ID: ${{ secrets.telegram_chat_id }}
+          GUARDIAN_WEBHOOK_URL: ${{ secrets.notification_webhook_url }}
+        run: |
+          report="$GITHUB_WORKSPACE/notification-evidence/verify/report.json"
+          if [[ -f "$GITHUB_WORKSPACE/notification-evidence/repair/report.json" ]]; then
+            report="$GITHUB_WORKSPACE/notification-evidence/repair/report.json"
+          elif [[ -f "$GITHUB_WORKSPACE/notification-evidence/model-smoke/report.json" ]]; then
+            report="$GITHUB_WORKSPACE/notification-evidence/model-smoke/report.json"
+          fi
+          if [[ ! -f "$report" ]]; then
+            echo 'Guardian produced no readable report.' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node guardian/bin/dsh-plugin-compat-guardian.js notify \
+            --repo "$GITHUB_WORKSPACE/target" \
+            --report "$report" | tee -a "$GITHUB_STEP_SUMMARY"

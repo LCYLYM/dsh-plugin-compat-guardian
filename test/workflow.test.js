@@ -9,16 +9,24 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
   const workflow = parse(source);
 
   assert.ok(workflow.on.workflow_call);
-  assert.equal(workflow.concurrency['cancel-in-progress'], true);
+  assert.equal(workflow.concurrency['cancel-in-progress'], false);
   assert.equal(workflow.jobs.verify.permissions.contents, 'read');
   assert.deepEqual(workflow.jobs.publish.permissions, {
     contents: 'write',
     'pull-requests': 'write',
+    issues: 'write',
   });
   assert.equal(workflow.jobs.repair.permissions.contents, 'read');
+  assert.equal(workflow.jobs['candidate-model-smoke'].permissions.contents, 'read');
   assert.deepEqual(workflow.jobs['publish-repair'].permissions, {
     contents: 'write',
     'pull-requests': 'write',
+    issues: 'write',
+  });
+  assert.deepEqual(workflow.jobs['publish-blocked-state'].permissions, {
+    contents: 'write',
+    'pull-requests': 'write',
+    issues: 'write',
   });
 
   const uses = Object.values(workflow.jobs)
@@ -32,9 +40,15 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
 
   assert.doesNotMatch(source, /pull_request_target|pull_request:/);
   assert.doesNotMatch(JSON.stringify(workflow.jobs.verify), /DEEPSEEK_API_KEY|secrets\./);
-  assert.doesNotMatch(JSON.stringify(workflow.jobs.publish), /DEEPSEEK_API_KEY|secrets\./);
-  assert.doesNotMatch(JSON.stringify(workflow.jobs['publish-repair']), /DEEPSEEK_API_KEY|secrets\./);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs.publish), /DEEPSEEK_API_KEY|deepseek_api_key/);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs['publish-repair']), /DEEPSEEK_API_KEY|deepseek_api_key/);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs['publish-blocked-state']), /DEEPSEEK_API_KEY|secrets\./);
   assert.match(JSON.stringify(workflow.jobs.repair), /DEEPSEEK_API_KEY.*secrets\.deepseek_api_key/);
+  assert.match(JSON.stringify(workflow.jobs['candidate-model-smoke']), /DEEPSEEK_API_KEY.*secrets\.deepseek_api_key/);
+  assert.doesNotMatch(JSON.stringify(workflow.jobs['candidate-model-smoke'].permissions), /write/);
+  assert.match(JSON.stringify(workflow.jobs.repair.outputs), /status.*steps\.repair\.outputs\.status/);
+  assert.match(workflow.jobs['publish-repair'].if, /outputs\.status == 'PASS'/);
+  assert.match(workflow.jobs['publish-blocked-state'].if, /BLOCKED_CONTRACT.*outputs\.status/);
   const modelCheckout = workflow.jobs.repair.steps.find(step => step.name.includes('failed plugin source'));
   assert.equal(modelCheckout.with['persist-credentials'], false);
 });

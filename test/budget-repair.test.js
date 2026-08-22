@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
-import { estimateCny, priceBand, projectTokenUsage } from '../lib/budget.js';
+import { estimateCny, estimateRouteCny, priceBand, projectTokenUsage, readDshSearchTelemetry } from '../lib/budget.js';
 import { assertRepairPaths, repairDshArgs, repairResumeAllowed } from '../lib/repair.js';
 
 test('usage projection replaces duplicate chunk/message samples per step', () => {
@@ -38,11 +41,23 @@ test('price map applies peak and low-price rates in Asia/Shanghai', () => {
   assert.equal(estimateCny(usage, pricing, lowDate).amount, 6.05);
 });
 
+test('CNY is unknown when the active provider route does not match the price map', () => {
+  const pricing = {
+    revision: 'test', timezone: 'Asia/Shanghai', peak_windows: [],
+    applies_to: { provider: 'deepseek-official', model: 'official-model', base_url: 'https://api.deepseek.com' },
+    rates: { peak: { input_cache_hit: 1, input_cache_miss: 1, output: 1 }, low_price: { input_cache_hit: 1, input_cache_miss: 1, output: 1 } },
+  };
+  const usage = { inputTokens: 10, outputTokens: 2, cacheReadTokens: 1, cacheWriteTokens: 0 };
+  assert.equal(estimateRouteCny(usage, pricing, { provider: 'custom', model: 'custom', base_url: 'https://example.invalid' }).amount, null);
+  assert.equal(estimateRouteCny(usage, pricing, pricing.applies_to).known, true);
+});
+
 test('repair path guard permits plugin source and blocks control paths', () => {
   const protectedPaths = ['.github/workflows/**', '.dsh-compat.yml', '.dsh-compat.lock.json', 'compatibility/**'];
   assert.doesNotThrow(() => assertRepairPaths(['lib/index.js'], protectedPaths));
   assert.throws(() => assertRepairPaths(['compatibility/dsh-smoke.yml'], protectedPaths), { code: 'PROTECTED_PATH_CHANGED' });
   assert.throws(() => assertRepairPaths(['../outside'], protectedPaths), { code: 'REPAIR_PATH_ESCAPE' });
+  assert.throws(() => assertRepairPaths(['config/credentials.json'], protectedPaths), { code: 'PROTECTED_PATH_CHANGED' });
 });
 
 test('same-version repair resumes only on N-to-Y intent or a larger budget', () => {
@@ -63,4 +78,19 @@ test('repair invokes the rc.2 headless profile with launcher flags before the ta
     '/tmp/repair.yml',
     'fix the plugin',
   ]);
+});
+
+test('search telemetry persists only counts and hashes, not queries or results', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'guardian-search-'));
+  try {
+    await writeFile(join(root, 'session.jsonl'), [
+      JSON.stringify({ type: 'tool/call', data: { callId: 'a', name: 'web_search', arguments: '{"query":"secret query"}' } }),
+      JSON.stringify({ type: 'tool/result', data: { callId: 'a', message: { content: [{ type: 'text', text: 'private result' }] } } }),
+    ].join('\n'));
+    const telemetry = await readDshSearchTelemetry(root);
+    assert.equal(telemetry.calls, 1);
+    assert.doesNotMatch(JSON.stringify(telemetry), /secret query|private result/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

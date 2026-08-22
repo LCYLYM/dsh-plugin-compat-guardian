@@ -29,3 +29,8 @@ jobs:
       runner: ubuntu-24.04
     secrets:
       deepseek_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
+      publisher_token: ${{ secrets.DSH_GUARDIAN_PUBLISH_TOKEN }}
+      email_gateway_url: ${{ secrets.GUARDIAN_EMAIL_GATEWAY_URL }}
+      telegram_bot_token: ${{ secrets.GUARDIAN_TELEGRAM_BOT_TOKEN }}
+      telegram_chat_id: ${{ secrets.GUARDIAN_TELEGRAM_CHAT_ID }}
+      notification_webhook_url: ${{ secrets.GUARDIAN_WEBHOOK_URL }}
