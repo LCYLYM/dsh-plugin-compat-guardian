@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { objectHash, stableStringify } from '../lib/hash.js';
 import { redactText } from '../lib/process.js';
-import { trackedTreeDigest } from '../lib/verifier.js';
+import { runtimeSnapshotIdentity, trackedTreeDigest } from '../lib/verifier.js';
 
 test('stableStringify and objectHash ignore object key insertion order', () => {
   const left = { b: 2, a: { d: 4, c: 3 } };
@@ -46,4 +46,29 @@ test('tracked source digest ignores the machine lock but not plugin source', () 
     trackedTreeDigest(before, ['.dsh-compat.lock.json']),
     trackedTreeDigest(sourceChange, ['.dsh-compat.lock.json']),
   );
+});
+
+test('snapshot runtime ignores ephemeral runner names but keeps stable platform facts', () => {
+  const runtime = {
+    node: { exactVersion: '24.19.0' },
+    packageManager: { name: 'npm', exactVersion: '11.17.0' },
+    runner: {
+      configuredLabel: 'ubuntu-24.04',
+      actualLabel: 'GitHub Actions 1000000881',
+      os: 'Linux',
+      arch: 'x64',
+      githubActions: true,
+    },
+  };
+  const first = runtimeSnapshotIdentity(runtime);
+  const second = runtimeSnapshotIdentity({
+    ...runtime,
+    runner: { ...runtime.runner, actualLabel: 'GitHub Actions 1000000883' },
+  });
+  assert.deepEqual(first, second);
+  assert.equal(first.runner.actualLabel, undefined);
+  assert.notDeepEqual(first, runtimeSnapshotIdentity({
+    ...runtime,
+    runner: { ...runtime.runner, os: 'Windows' },
+  }));
 });

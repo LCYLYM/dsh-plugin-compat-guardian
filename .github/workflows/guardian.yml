@@ -45,33 +45,33 @@ jobs:
             exit 2
           fi
 
-      # actions/checkout v4, pinned 2026-08-21.
+      # actions/checkout v7.0.1, pinned 2026-08-22.
       - name: Check out plugin repository without write credentials
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: target
           persist-credentials: false
 
-      # actions/checkout v4, pinned 2026-08-21.
+      # actions/checkout v7.0.1, pinned 2026-08-22.
       - name: Check out pinned Guardian engine
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ inputs.guardian_repository }}
           ref: ${{ inputs.guardian_ref }}
           path: guardian
           persist-credentials: false
 
-      # actions/setup-node v4, pinned 2026-08-21.
+      # actions/setup-node v7.0.0, pinned 2026-08-22.
       - name: Set up Node 24
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: guardian/package-lock.json
 
-      # pnpm/action-setup v4, pinned 2026-08-21. DSH plugin management invokes pnpm.
+      # pnpm/action-setup v6.0.10, pinned 2026-08-22. DSH plugin management invokes pnpm.
       - name: Set up pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
         with:
           version: 10.33.2
           run_install: false
@@ -104,10 +104,10 @@ jobs:
           fi
           exit "$verifier_exit"
 
-      # actions/upload-artifact v4, pinned 2026-08-21.
+      # actions/upload-artifact v7.0.1, pinned 2026-08-22.
       - name: Upload sanitized mechanical evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: dsh-guardian-${{ github.run_id }}
           path: ${{ runner.temp }}/guardian-report
@@ -127,16 +127,16 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # actions/checkout v4, pinned 2026-08-21. Only this job receives write credentials.
+      # actions/checkout v7.0.1, pinned 2026-08-22. Only this job receives write credentials.
       - name: Check out exact source for publication
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: target
           persist-credentials: true
 
-      # actions/download-artifact v4, pinned 2026-08-21.
+      # actions/download-artifact v8.0.1, pinned 2026-08-22.
       - name: Download verified evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: dsh-guardian-${{ github.run_id }}
           path: evidence
