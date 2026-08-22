@@ -44,6 +44,7 @@ test('enabled adapters send only the sanitized event to their configured endpoin
   ]);
   assert.deepEqual(requests[0].body, { channel: 'email', event });
   assert.equal(requests[1].body.chat_id, '12345');
-  assert.match(requests[1].body.text, /DSH Guardian PASS: 0\.1\.1-rc\.2/);
+  assert.match(requests[1].body.text, /DSH Guardian：兼容验证通过/);
+  assert.match(requests[1].body.text, /目标 DSH：0\.1\.1-rc\.2/);
   assert.deepEqual(requests[2].body, event);
 });
