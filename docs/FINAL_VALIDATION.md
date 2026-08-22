@@ -68,7 +68,7 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 发布前用同一组 credential/private-path 模式只计数、不回显内容地扫描：
 
-- Guardian 全历史 44 个 commit：文件内容 0 命中，commit message 0 命中。
+- Guardian 全量扫描点 `1412394` 共46 个 commit：文件内容 0 命中，commit message 0 命中。
 - 公开 fixture 全历史 35 个 commit：文件内容 0 命中，commit message 0 命中。
 - 四个社区 fork 中由本项目新增的 8 个 unique commit：新增行 0 命中，commit message 0 命中。
 - fixture + 四个 fork 共 29 次 Actions run：28 份可读日志 0 命中；1 次早期取消 run `32559978584` 的 GitHub job log 不存在，无可读面，不写成“已扫描通过”。
