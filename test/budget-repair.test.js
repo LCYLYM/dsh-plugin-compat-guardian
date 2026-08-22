@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { estimateCny, priceBand, projectTokenUsage } from '../lib/budget.js';
-import { assertRepairPaths, repairResumeAllowed } from '../lib/repair.js';
+import { assertRepairPaths, repairDshArgs, repairResumeAllowed } from '../lib/repair.js';
 
 test('usage projection replaces duplicate chunk/message samples per step', () => {
   const events = [
@@ -53,4 +53,14 @@ test('same-version repair resumes only on N-to-Y intent or a larger budget', () 
   assert.equal(repairResumeAllowed(previous, { max_tokens: 100, max_cny: 10, max_wall_minutes: 60 }, 'N'), false);
   assert.equal(repairResumeAllowed(previous, { max_tokens: 100, max_cny: 10, max_wall_minutes: 60 }, 'Y'), true);
   assert.equal(repairResumeAllowed(previous, { max_tokens: 101, max_cny: 10, max_wall_minutes: 60 }, 'N'), true);
+});
+
+test('repair invokes the rc.2 headless profile with launcher flags before the task', () => {
+  assert.deepEqual(repairDshArgs('/tmp/repair.yml', 'fix the plugin'), [
+    '--profile',
+    'headless',
+    '--patch',
+    '/tmp/repair.yml',
+    'fix the plugin',
+  ]);
 });
