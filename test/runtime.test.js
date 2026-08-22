@@ -71,4 +71,5 @@ test('repository installs use each selected package manager frozen mode', () => 
   assert.deepEqual(packageManagerInstallArgs({ name: 'pnpm', exactVersion: '10.0.0', lockfiles: ['pnpm-lock.yaml'] }), ['install', '--frozen-lockfile']);
   assert.deepEqual(packageManagerInstallArgs({ name: 'yarn', exactVersion: '1.22.0', lockfiles: ['yarn.lock'] }), ['install', '--frozen-lockfile']);
   assert.deepEqual(packageManagerInstallArgs({ name: 'yarn', exactVersion: '4.0.0', lockfiles: ['yarn.lock'] }), ['install', '--immutable']);
+  assert.deepEqual(packageManagerInstallArgs({ name: 'npm', exactVersion: '11.0.0', lockfiles: [] }), ['install', '--no-package-lock']);
 });
