@@ -28,6 +28,8 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 | 429 | 首请求 + 1 次 provider retry | `MODEL_RATE_LIMITED / BLOCKED_EXTERNAL` |
 | 503 | 首请求 + 1 次 provider retry | `MODEL_PROVIDER_5XX / BLOCKED_EXTERNAL` |
 | stream timeout | 首请求 + 1 次 provider retry | `MODEL_PROVIDER_TIMEOUT / BLOCKED_EXTERNAL` |
+| 不可达 URL | 真实 rc.2 连接已关闭的本地端口 | `MODEL_PROVIDER_UNREACHABLE / BLOCKED_CONFIG` |
+| 未注册 provider | 真实 rc.2 在发起 HTTP 前拒绝，端点 0 请求 | `MODEL_PROVIDER_NOT_REGISTERED / BLOCKED_CONFIG` |
 | repair 401 全路径 | 真实 repair DSH 命中 401 | blocked lock 为 `BLOCKED_CONFIG`，`automaticRepairUsed=false`，`attemptsUsed=0` |
 
 另有确定性证据证明：缺 Key 的 repair 和 model smoke 都生成 blocked lock；非法/relative/numeric URL、空 provider、非字符串 model、非法 env 名会在 DSH 启动前拒绝；repair 前同时检查 state/repair 分支；仅持久化 blocked lock 的 push 因输入指纹未变而冻结；model smoke 失败不会推进 `verified`。

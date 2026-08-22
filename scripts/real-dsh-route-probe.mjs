@@ -71,7 +71,7 @@ try {
     CI: 'true', DSH_HOME: dshHome,
     PATH: `${join(runner, 'node_modules', '.bin')}${delimiter}${process.env.PATH ?? ''}`,
   };
-  const invoke = () => runCommand(dsh, ['--profile', 'headless', '--patch', overlay, 'Reply briefly without tools.'], {
+  const invoke = (patchPath = overlay) => runCommand(dsh, ['--profile', 'headless', '--patch', patchPath, 'Reply briefly without tools.'], {
     cwd: temporaryRoot, timeoutMs: 90_000, env, secretValues: ['guardian-route-secret'], reject: false,
   });
 
@@ -98,6 +98,32 @@ try {
     'MODEL_CREDENTIAL_REJECTED', 'MODEL_NOT_FOUND', 'MODEL_ENDPOINT_NOT_FOUND',
     'MODEL_RATE_LIMITED', 'MODEL_PROVIDER_5XX', 'MODEL_PROVIDER_TIMEOUT',
   ]);
+
+  const unavailableServer = createServer();
+  unavailableServer.listen(0, '127.0.0.1');
+  await once(unavailableServer, 'listening');
+  const unavailablePort = unavailableServer.address().port;
+  unavailableServer.close();
+  await once(unavailableServer, 'close');
+  const unavailableConfig = structuredClone(config);
+  unavailableConfig.credentials.base_url = `http://127.0.0.1:${unavailablePort}`;
+  const unavailableOverlay = join(temporaryRoot, 'unavailable-route.yml');
+  await writeFile(unavailableOverlay, stringify(dshRouteRows(unavailableConfig)));
+  const unavailableResult = await invoke(unavailableOverlay);
+  assert.notEqual(unavailableResult.exitCode, 0);
+  const unavailableFailure = classifyModelFailure(new GuardianError('COMMAND_FAILED', `${unavailableResult.stdout}\n${unavailableResult.stderr}`));
+  assert.equal(unavailableFailure.code, 'MODEL_PROVIDER_UNREACHABLE');
+
+  const unregisteredConfig = structuredClone(config);
+  unregisteredConfig.repair.provider = 'guardian-unregistered-provider';
+  const unregisteredOverlay = join(temporaryRoot, 'unregistered-provider.yml');
+  await writeFile(unregisteredOverlay, stringify(dshRouteRows(unregisteredConfig)));
+  const beforeUnregistered = requests.length;
+  const unregisteredResult = await invoke(unregisteredOverlay);
+  assert.notEqual(unregisteredResult.exitCode, 0);
+  assert.equal(requests.length, beforeUnregistered);
+  const unregisteredFailure = classifyModelFailure(new GuardianError('COMMAND_FAILED', `${unregisteredResult.stdout}\n${unregisteredResult.stderr}`));
+  assert.equal(unregisteredFailure.code, 'MODEL_PROVIDER_NOT_REGISTERED');
 
   const repairRepo = join(temporaryRoot, 'repair-repo');
   const repairOutput = join(temporaryRoot, 'repair-output');
@@ -137,6 +163,8 @@ try {
     dsh: '0.1.1-rc.2', customRoute: {
       path: requests[0].url, authorizationMatched: true, model: 'guardian-custom-model', requests: requests.length,
     }, failures: observed,
+    unreachable: { code: unavailableFailure.code, guardianStatus: unavailableFailure.status },
+    unregisteredProvider: { code: unregisteredFailure.code, guardianStatus: unregisteredFailure.status, httpRequests: 0 },
     repair401: { status: repairCampaign.status, automaticRepairUsed: false, attemptsUsed: 0 },
   }, null, 2)}\n`);
 } finally {
