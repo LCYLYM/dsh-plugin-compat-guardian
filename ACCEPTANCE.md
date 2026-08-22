@@ -53,9 +53,9 @@
 - R49 [pass] 默认 runner 必须为 `ubuntu-24.04`，允许仓库覆盖一个 runner label，并把实际 OS/label 写入 verified tuple；V1 不自动展开 OS matrix；surface: thin/reusable workflow/config/report；evidence: 默认 runner、单覆盖和无 matrix workflow 回读。
 - R50 [pass] `npx dsh-plugin-compat-guardian onboard` 必须只在临时区和新分支生成 onboarding 内容，使用本地 provider 环境但不持久化凭据；有已认证 `gh` 时打开 PR，无 `gh` 时保留分支并输出精确命令，绝不能直接写默认分支；surface: CLI/temp DSH_HOME/git/gh；evidence: 有无 gh 两条真实路径、默认分支零 diff 和 secret 扫描。
 - R51 [partial] publisher 默认使用仓库 `GITHUB_TOKEN` 并在缺少创建 PR 权限或 checks 等待批准时明确阻塞/等待；无人值守 auto-merge 可选细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`，只允许 publisher job 获得，repair/candidate/verifier 均不可见；V1 不强制额外 token 或 GitHub App；surface: workflow permissions/secrets/publisher；evidence: 默认 PR、等待批准、可选 token auto-merge 和三类非 publisher secret 拒绝。
-- R52 [open] 缺 Key、401/403、错误 model/base URL/provider 与不可达网络必须分类为可读且去敏的持久化阻塞状态；429、5xx、timeout 只允许当次立即重试一次，之后同版本 schedule 不再调模型，只在手工触发、路由配置改变或新目标版本后恢复；surface: repair/model-smoke lock、Actions Summary 和状态 PR；evidence: 八类故障回归与真实 DSH rc.2 本地 HTTP 故障端点。
-- R53 [open] repair/model-smoke 启动前必须同时检查同目标的 state 分支和维修分支/PR，任一未合并都直接冻结；自定义 DeepSeek base URL、key 变量引用和 model 必须通过 DSH 原生 `llm-deepseek` adapter patch 生效，无效 URL/环境变量名在启动前拒绝；surface: reusable workflow、DSH overlay 和 config loader；evidence: 未合并维修 PR 零模型调用、自定义 route 实请求和非法配置表驱动回归。
+- R52 [pass] 缺 Key、401/403、错误 model/base URL/provider 与不可达网络必须分类为可读且去敏的持久化阻塞状态；429、5xx、timeout 只允许当次立即重试一次，之后同版本 schedule 不再调模型，只在手工触发、路由配置改变或新目标版本后恢复；surface: repair/model-smoke lock、Actions Summary 和状态 PR；evidence: 71 项回归与真实 DSH rc.2 本地 HTTP 故障端点。
+- R53 [pass] repair/model-smoke 启动前必须同时检查同目标的 state 分支和维修分支/PR，任一未合并都直接冻结；自定义 DeepSeek base URL、key 变量引用和 model 必须通过 DSH 原生 `llm-deepseek` adapter patch 生效，无效 URL/环境变量名在启动前拒绝；surface: reusable workflow、DSH overlay 和 config loader；evidence: 未合并维修 PR 零模型调用、自定义 route 实请求和非法配置表驱动回归。
 
-Current slice: 凭据与防重复执行专项修复中；R52/R53 未达标前验收为 BLOCKED
+Current slice: 凭据与防重复执行专项 PASS；主链路公开真实 PASS，可选外部投递/PAT 及需真实上游事件的项目保持 partial
 
 Project stage: V1 implemented and primary path validated

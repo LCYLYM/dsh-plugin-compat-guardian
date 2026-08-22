@@ -3,6 +3,7 @@
 日期：2026-08-22  
 自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
 社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
+模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
 实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`
 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)
 
@@ -11,6 +12,25 @@
 V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。
 
 验收不把“已实现可选 adapter”写成“已给外部收件人投递”；本次没有 email/TG/webhook 目标和 publisher PAT，所以这些只有确定性测试或安全等待证据。
+
+## 模型错误与防循环专项（2026-08-22）
+
+本轮对旧版 46/46 之外新增了配置、凭据、路由和状态去重回归，`npm run check` 现为 71/71 PASS。
+
+`npm run test:real-route` 使用真实 `@deepseek-ai/dsh@0.1.1-rc.2` 和本地 OpenAI-compatible HTTP 端点，不是 mock DSH：
+
+| 场景 | 真实观测 | Guardian 结果 |
+| --- | --- | --- |
+| 自定义 URL + Key 引用 + model | 到达 `/chat/completions`，Bearer 和 `guardian-custom-model` 匹配 | route PASS |
+| 401 | 1 个 HTTP 请求 | `MODEL_CREDENTIAL_REJECTED / BLOCKED_CONFIG` |
+| 错误 model | 1 个 HTTP 请求 | `MODEL_NOT_FOUND / BLOCKED_CONFIG` |
+| 错误 endpoint/404 | 1 个 HTTP 请求 | `MODEL_ENDPOINT_NOT_FOUND / BLOCKED_CONFIG` |
+| 429 | 首请求 + 1 次 provider retry | `MODEL_RATE_LIMITED / BLOCKED_EXTERNAL` |
+| 503 | 首请求 + 1 次 provider retry | `MODEL_PROVIDER_5XX / BLOCKED_EXTERNAL` |
+| stream timeout | 首请求 + 1 次 provider retry | `MODEL_PROVIDER_TIMEOUT / BLOCKED_EXTERNAL` |
+| repair 401 全路径 | 真实 repair DSH 命中 401 | blocked lock 为 `BLOCKED_CONFIG`，`automaticRepairUsed=false`，`attemptsUsed=0` |
+
+另有确定性证据证明：缺 Key 的 repair 和 model smoke 都生成 blocked lock；非法/relative/numeric URL、空 provider、非字符串 model、非法 env 名会在 DSH 启动前拒绝；repair 前同时检查 state/repair 分支；仅持久化 blocked lock 的 push 因输入指纹未变而冻结；model smoke 失败不会推进 `verified`。
 
 ## 公开端到端证据
 
@@ -40,7 +60,7 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 ## 确定性验证
 
-`npm run check` 通过 46/46 项测试，包括：
+`npm run check` 通过 71/71 项测试，包括：
 
 - usage 去重、峰/谷价格、历史费用累加和未知 route；
 - `N -> Y` 单次 reset、增加额度恢复、低价等待、手工 bypass、30% 一次收敛和四类上限；
@@ -68,11 +88,11 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 发布前用同一组 credential/private-path 模式只计数、不回显内容地扫描：
 
-- Guardian 全量扫描点 `1412394` 共46 个 commit：文件内容 0 命中，commit message 0 命中。
+- Guardian 截至专项实现 `4a1ad081cbe04d174f90b559530930fcd8278516` 共 49 个 commit：文件内容 0 命中，commit message 0 命中。
 - 公开 fixture 全历史 35 个 commit：文件内容 0 命中，commit message 0 命中。
 - 四个社区 fork 中由本项目新增的 8 个 unique commit：新增行 0 命中，commit message 0 命中。
 - fixture + 四个 fork 共 29 次 Actions run：28 份可读日志 0 命中；1 次早期取消 run `32559978584` 的 GitHub job log 不存在，无可读面，不写成“已扫描通过”。
-- 当前未提交文档/Logo diff：0 命中。
+- 当前专项验收文档 diff：0 命中。
 
 上述模式包含 DeepSeek/GitHub/NPM/AWS/Slack 常见 token 形态、用户本机绝对路径、Codex 会话目录和原参考工程私有路径。
 

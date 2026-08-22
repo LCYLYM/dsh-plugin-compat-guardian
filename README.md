@@ -162,4 +162,4 @@ npm ci
 npm run check
 ```
 
-当前本地套件：46/46 通过。项目采用 MIT License。
+当前本地套件：71/71 通过；另有真实 DSH rc.2 自定义 route/故障端点探针。项目采用 MIT License。

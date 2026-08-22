@@ -18,7 +18,7 @@
 | 固定 repair DSH，也可配置跟新 | 默认 rc.2，campaign 内锁定；配置可改 | 真实 repair run 32560587541 |
 | 独立 verifier 复验，产出可合并 PR | repair job 无 Git 写权，publisher 只消费 PASS artifact | PR #10 / #19 |
 | 可选 auto-merge/direct-push | 三种模式已实现，默认 PR，风险 diff 强制 PR | direct run 32566086836；auto-merge PR #15 |
-| token/CNY/时间/轮次上限与 30% 收敛 | campaign ledger + 单次 steer + 峰谷分段估价 | 46 项测试；最终 lock 459,577 tokens |
+| token/CNY/时间/轮次上限与 30% 收敛 | campaign ledger + 单次 steer + 峰谷分段估价 | 71 项当前测试；公开最终 lock 459,577 tokens |
 | 同版本不死循环 | 一次自动维修；提额或 `resetBudget: N → Y` 才恢复 | campaign/reset 测试 |
 | DeepSeek base URL/key/model 可配 | 直接 patch DSH `llm-deepseek` 的 `baseURL/apiKeyEnv`；真实 rc.2 自定义 route 已验证 | 其他 provider 必须已在 DSH profile 注册；只改 id 不会自动安装 adapter |
 | 允许 repair DSH 按需搜索 | 默认允许，不强制每次搜，只存次数/hash | 搜索 telemetry 测试 |
