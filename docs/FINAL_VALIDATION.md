@@ -4,6 +4,7 @@
 自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
 社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
 模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
+模型错误/防循环专项验收 SHA：`236252455e05acca890a28ff566c9a6916169f76`
 实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`
 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)
 
@@ -34,6 +35,11 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 另有确定性证据证明：缺 Key 的 repair 和 model smoke 都生成 blocked lock；非法/relative/numeric URL、空 provider、非字符串 model、非法 env 名会在 DSH 启动前拒绝；repair 前同时检查 state/repair 分支；仅持久化 blocked lock 的 push 因输入指纹未变而冻结；model smoke 失败不会推进 `verified`。
 
+专项修复还在公开 fixture 上做了两次连续运行，不只依赖本地测试：
+
+- [run 32576745068](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32576745068) 使用专项验收 SHA 完成 18/18 无模型兼容检查和真实候选模型 smoke；smoke 观测到图片和插件输入，共记录 59,930 tokens，并只生成一个待审阅的 [PR #20](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/20)。
+- 保持 PR #20 未合并后再次手工触发 [run 32576967353](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32576967353)。候选模型作业在运行模型前返回 `FROZEN / STATE_PUBLICATION_PENDING`；上传报告只有候选版本和冻结原因，没有 usage、预算或模型结果字段。repair、publish、publish-model-smoke-state 均 skipped，公开仓库仍只有 PR #20，没有重复分支或 PR。
+
 ## 公开端到端证据
 
 | 能力 | 证据 | 结果 |
@@ -48,6 +54,8 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 | 外部暂态故障恢复 | [blocked run 32566217178](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566217178) / [recovery run 32566532050](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566532050) | 暂态 404 没有假成功，修正 readiness 后恢复 |
 | 费用时序 | [run 32566922071](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566922071) | 459,577 tokens，0.326965 CNY，`mixed`；历史峰时不被当前谷价重算 |
 | 防死循环收敛 | [run 32567069724](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32567069724) | 合并后只跑无模型 verify/notify，repair、model smoke、publish 全 skipped |
+| 专项修复后的真实模型 smoke | [run 32576745068](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32576745068) / [PR #20](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/20) | 18/18 兼容检查和真实模型/视觉 smoke PASS，只产生一个 lock-only PR |
+| 未合并 PR 去重 | [run 32576967353](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32576967353) | 模型前 `STATE_PUBLICATION_PENDING` 冻结，无 usage 字段，无重复 repair/PR |
 
 ## 真实运行暴露并修复的 Guardian 问题
 
@@ -90,8 +98,8 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 发布前用同一组 credential/private-path 模式只计数、不回显内容地扫描：
 
-- Guardian 截至专项实现 `4a1ad081cbe04d174f90b559530930fcd8278516` 共 49 个 commit：文件内容 0 命中，commit message 0 命中。
-- 公开 fixture 全历史 35 个 commit：文件内容 0 命中，commit message 0 命中。
+- Guardian 截至专项验收 `236252455e05acca890a28ff566c9a6916169f76` 共 51 个 commit：文件内容 0 命中，commit message 0 命中。
+- 公开 fixture 截至专项公开运行所用 `e122d80bd19bbf22a72417ee0015f0d41b4e6cd8` 的 main 共 30 个 commit；本地可达全部 refs 共 36 个 unique commit：文件内容 0 命中，commit message 0 命中。
 - 四个社区 fork 中由本项目新增的 8 个 unique commit：新增行 0 命中，commit message 0 命中。
 - fixture + 四个 fork 共 29 次 Actions run：28 份可读日志 0 命中；1 次早期取消 run `32559978584` 的 GitHub job log 不存在，无可读面，不写成“已扫描通过”。
 - 当前专项验收文档 diff：0 命中。
