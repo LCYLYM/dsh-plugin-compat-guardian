@@ -4,7 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { resolveModelFixtures } from '../lib/model-smoke.js';
+import { modelSmokeWebArgs, resolveModelFixtures } from '../lib/model-smoke.js';
+
+test('model smoke starts the web profile directly without a legacy web subcommand', () => {
+  assert.deepEqual(modelSmokeWebArgs('web', '/tmp/overlay.yml', 4321), [
+    '--profile', 'web', '--patch', '/tmp/overlay.yml', '--host', '127.0.0.1', '--port', '4321',
+  ]);
+});
 
 test('reviewed visual fixture is frozen by bytes and cannot escape the repository', async () => {
   const root = await mkdtemp(join(tmpdir(), 'guardian-fixture-'));
