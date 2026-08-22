@@ -86,12 +86,14 @@ See [`.dsh-compat.example.yml`](.dsh-compat.example.yml) for the complete config
 | Fixture | Result | Boundary proved |
 | --- | --- | --- |
 | [`dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) | Real auto-repair | Controlled incompatibility → DSH repair → independent verification → PR, plus visual smoke, direct push, auto-merge safety and NOOP evidence |
-| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) | PASS | Real plugin API assertion and install/boot/remove round trip |
-| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) | PASS | A package selected from a large pnpm monorepo |
-| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) | PASS | Install/composition/web boot; this does not claim watchdog behavior coverage |
+| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) / [PR #1](https://github.com/LCYLYM/dsh-whale-report/pull/1) | PASS | Real plugin API assertion and install/boot/remove round trip |
+| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) / [PR #1](https://github.com/LCYLYM/dsh-web-ui/pull/1) | PASS | A package selected from a large pnpm monorepo |
+| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) / [PR #1](https://github.com/LCYLYM/dsh-ankh-guard/pull/1) | PASS | Install/composition/web boot; this does not claim watchdog behavior coverage |
 | [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | ONBOARDING_BLOCKED | A withdrawn historical package blocks a trustworthy baseline, so no model repair is attempted |
 
 Reports are Chinese-first and human-scannable. They persist sanitized command evidence, hashes, status, duration and usage—never API keys, authorization headers, full model conversations or private local paths.
+
+The three community PRs were opened manually through Guardian's documented `WAITING_FOR_GITHUB_APPROVAL` fallback because their first runs finished before the repository setting allowed Actions-created PRs. They are not presented as bot-created PRs; fixture PRs #10/#19 provide that evidence.
 
 ## Scope and risk
 

@@ -122,12 +122,14 @@ CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSe
 | 样本 | 结果 | 当前证明的边界 |
 | --- | --- | --- |
 | [`dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) | ✅ 真实自动修复 | 受控不兼容 → DSH 维修 → 独立复验 → PR，另有视觉 smoke/direct-push/auto-merge/NOOP 证据 |
-| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) | ✅ PASS | 真实插件 API 断言、安装/启动/卸载 |
-| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) | ✅ PASS | 大型 pnpm monorepo 中的 Skill Explorer package |
-| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) | ✅ PASS | 新于当前宿主的 peer cohort 仍能安装、组合、启动；不等于 watchdog 行为验收 |
+| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) / [PR #1](https://github.com/LCYLYM/dsh-whale-report/pull/1) | ✅ PASS | 真实插件 API 断言、安装/启动/卸载 |
+| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) / [PR #1](https://github.com/LCYLYM/dsh-web-ui/pull/1) | ✅ PASS | 大型 pnpm monorepo 中的 Skill Explorer package |
+| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) / [PR #1](https://github.com/LCYLYM/dsh-ankh-guard/pull/1) | ✅ PASS | 新于当前宿主的 peer cohort 仍能安装、组合、启动；不等于 watchdog 行为验收 |
 | [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | 🛑 ONBOARDING_BLOCKED | 历史 lock 依赖已从 NPM 撤下；没有可信基线，正确不调模型 |
 
 完整运行 ID、PR、实际 token/估算 CNY 和尚未绑定的可选外部渠道，见 [最终验收报告](docs/FINAL_VALIDATION.md)。
+
+> 三个社区 PR 是按第一次 run 给出的 `WAITING_FOR_GITHUB_APPROVAL` 回退路径手工打开；不写成 Actions 自动建 PR。机器人自动建 PR 的真实证据是 fixture PR #10/#19。
 
 ## 边界和风险
 

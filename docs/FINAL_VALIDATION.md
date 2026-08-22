@@ -55,12 +55,14 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 | 样本 | 精确测试面 | 结果 |
 | --- | --- | --- |
-| [Whale Report run 32570423087](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) | 仓库测试/构建、pack/add/dump/web、`/whale/api/list`、remove | PASS |
-| [`dsh-web-ui` run 32570426593](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) | pnpm monorepo 根安装，`packages/dsh-skill-explorer` 测试/构建/打包，health 断言 | PASS |
-| [Ankh Guard run 32570430758](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) | 测试/构建、pack/add/dump/web/remove | PASS；不宣称 watchdog 行为已验收 |
+| [Whale Report run 32570423087](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) / [PR #1](https://github.com/LCYLYM/dsh-whale-report/pull/1) | 仓库测试/构建、pack/add/dump/web、`/whale/api/list`、remove | PASS |
+| [`dsh-web-ui` run 32570426593](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) / [PR #1](https://github.com/LCYLYM/dsh-web-ui/pull/1) | pnpm monorepo 根安装，`packages/dsh-skill-explorer` 测试/构建/打包，health 断言 | PASS |
+| [Ankh Guard run 32570430758](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) / [PR #1](https://github.com/LCYLYM/dsh-ankh-guard/pull/1) | 测试/构建、pack/add/dump/web/remove | PASS；不宣称 watchdog 行为已验收 |
 | [Office run 32570428991](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | 首次基线的 frozen install | `ONBOARDING_BLOCKED`；`@deepseek-ai/dsh-type-meta@0.0.1-rc.1` 已从 NPM 撤下，没有进入模型修复 |
 
 本轮没有找到一个“上游未修、对当前 NPM latest rc.2 可安装且真实回归”的社区 commit。Whale Report 历史中标注的新 harness 修复，其修复前 commit 对 rc.2 实测仍 PASS；不用提交说明替代当前运行事实。因此社区样本用于异构回归和诚实阻断证据，真实自动修复成功案例仍由受控公开 fixture 的 run 32560587541 / PR #10 承担。
+
+三个 PASS 社区 fork 的第一次 publisher 在仓库尚未打开“Actions 创建 PR”开关时正确停在 `WAITING_FOR_GITHUB_APPROVAL`；表中 PR 按该回退路径手工打开。他们证明产物可合并，不写成 Actions 自动建 PR。
 
 ## 提交历史与公开日志去敏审计
 
