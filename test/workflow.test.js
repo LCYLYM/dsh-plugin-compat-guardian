@@ -49,6 +49,9 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
   assert.match(JSON.stringify(workflow.jobs.repair.outputs), /status.*steps\.repair\.outputs\.status/);
   assert.match(workflow.jobs['publish-repair'].if, /outputs\.status == 'PASS'/);
   assert.match(workflow.jobs['publish-blocked-state'].if, /BLOCKED_CONTRACT.*outputs\.status/);
+  const notifySteps = workflow.jobs.notify.steps;
+  assert.match(notifySteps.find(step => step.name === 'Download repair report when one exists').if, /needs\.repair\.result.*skipped/);
+  assert.match(notifySteps.find(step => step.name === 'Download candidate model-smoke report when one exists').if, /needs\.candidate-model-smoke\.result.*skipped/);
   const modelCheckout = workflow.jobs.repair.steps.find(step => step.name.includes('failed plugin source'));
   assert.equal(modelCheckout.with['persist-credentials'], false);
 });
