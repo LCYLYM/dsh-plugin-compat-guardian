@@ -1,6 +1,6 @@
 # DSH Plugin Compatibility Guardian：产品与技术设计
 
-状态：Draft 0.4，grilling 决策已收口，已授权进入 M0 实现
+状态：V1 Final 1.0，grilling 决策已收口，M0–M3 已实现
 
 日期：2026-08-21
 
@@ -516,7 +516,7 @@ M0 分成两个清楚的验收阶段：
 1. **先证明“会检查”**：不配置模型 API key，只运行版本探测、仓库测试、插件打包安装、`dump-config`、真实 `dsh web` 启动、插件专属 smoke、清理、报告、lock 更新和重复触发去重。任何失败只报告，不修代码。
 2. **再证明“会维修”**：第一阶段稳定后，在隔离测试分支把已经发生过的 `WebServer` 契约改回错误的 `httpServer`，形成可解释、可复现的真实兼容故障；这时才配置 repair model。机器人必须复现失败、恢复正确接口、重新跑完第一阶段全部检查，并创建修复 PR。
 
-两个阶段都使用 `pull-request` 模式，关闭 `auto-merge` 和 `direct-push`。第二阶段的故障分支、secret 与模型调用目前都只在设计中，grilling 结束前不得创建或执行。
+两个阶段都使用 `pull-request` 模式，关闭 `auto-merge` 和 `direct-push`。该历史验收已于 2026-08-22 完成；后续 M3 又独立验证了真实视觉 smoke、direct-push 和 auto-merge 安全等待。
 
 ### M1：latest 收敛与状态
 
@@ -532,4 +532,4 @@ M0 分成两个清楚的验收阶段：
 
 ## 19. Grilling 收口与实现门
 
-D1–D53 已覆盖 V1 的产品范围、基线、验证、维修、预算、权限、交付、通知、运行环境与安装入口；当前没有必须继续增加的设计问题。用户已于 2026-08-21 明确结束 grilling 并授权实现；M0 本地真实闭环已经 PASS，后续严格按 `IMPLEMENTATION_PLAN.md` 的 M1–M3 顺序推进，不在实现过程中静默扩大范围。
+D1–D53 已覆盖 V1 的产品范围、基线、验证、维修、预算、权限、交付、通知、运行环境与安装入口。用户于 2026-08-21 结束 grilling 并授权实现；M0–M3 现已按原范围完成，实现与真实验收边界见 `STATE.md` 和 `FINAL_VALIDATION.md`。

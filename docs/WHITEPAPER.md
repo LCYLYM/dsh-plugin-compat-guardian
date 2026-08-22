@@ -258,13 +258,13 @@ upstream 是 fork 最初来源的原作者仓库。Guardian 不需要知道它�
 
 在 fixture 隔离故障分支恢复历史 `httpServer` 接口错误，使用固定 repair DSH 真实修复，独立复验并产生可合并但不自动合并的 PR。加入预算、低价等待、一次性 reset、保护路径和 diff 分类。
 
-### M3：可选生产能力
+### M3：可选生产能力（已实现）
 
-加入真实模型 smoke、DeepSeek 搜索证据、auto-merge/direct-push、email/TG/webhook，以及竞态、external blocked、contract PR 等完整恢复路径。
+已加入真实模型 smoke、DeepSeek 搜索证据、auto-merge/direct-push、email/TG/webhook，以及竞态、external blocked、contract PR 等完整恢复路径。其中真实视觉、direct-push、auto-merge 默认 token 等待和 external recovery 已有公开 Actions 证据；未提供目标/凭据的外部 adapter 不冒充现场投递。
 
 ## 18. 成功标准
 
-MVP 成功不是“代码写完”，而是公开 fixture 的 GitHub run 能提供下面这条可复核证据链：
+V1 成功不是“代码写完”，而是公开 fixture 的 GitHub run 能提供下面这条可复核证据链：
 
 ```text
 registry exact snapshot
@@ -278,7 +278,7 @@ registry exact snapshot
   -> unchanged rerun = NOOP
 ```
 
-M2 成功还必须看到：真实旧接口故障、模型实际产生的窄修复、原 contract 全部复验通过、一个可合并 PR，以及未自动合并。
+M2 已看到真实旧接口故障、模型实际产生的窄修复、原 contract 全部复验通过和可合并 PR。M3 又看到真实视觉请求、三种发布路径的关键边界、跨峰谷费用累加以及合并后无模型 NOOP。
 
 ## 19. 明确不做
 

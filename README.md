@@ -2,7 +2,7 @@
 
 安装在 DeepSeek Harness（DSH）插件仓库中的 GitHub Actions 维修机器人：追踪 NPM `latest`，隔离验证插件，不兼容时用本轮已锁定的 repair DSH 自动修复，再由独立 verifier 复验并产出可合并 PR。
 
-当前阶段：M0/M1/M2 technical MVP 已完成公开真实验收。公开样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) 已在 GitHub-hosted `ubuntu-24.04` 上完成无模型验证、受控不兼容、真实 DSH 自动维修、独立复测、维修 PR 和合并后 NOOP。可复核链接、token/费用和未完成边界见 [STATE.md](STATE.md)。
+当前阶段：V1 实现完成。公开样本仓库 [`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) 已在 GitHub-hosted `ubuntu-24.04` 上完成无模型验证、受控不兼容、真实 DSH 自动维修、独立复测、真实模型/视觉 smoke、PR 交付、direct-push、auto-merge 安全等待和合并后 NOOP。可复核链接、实时验收边界和 token/估算费用见 [STATE.md](STATE.md) 与 [最终验收报告](docs/FINAL_VALIDATION.md)。
 
 ## 安装到一个插件仓库
 
@@ -10,14 +10,14 @@
 
 ```bash
 npm exec --yes \
-  --package=github:LCYLYM/dsh-plugin-compat-guardian#ba18c1d302f5b0948f3499455dcc6184848d56c2 \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#5934767074ff0f0c1d1e7283e50b9cb64e3669c6 \
   -- dsh-plugin-compat-guardian onboard \
-  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@ba18c1d302f5b0948f3499455dcc6184848d56c2
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@5934767074ff0f0c1d1e7283e50b9cb64e3669c6
 ```
 
-命令只创建并推送 onboarding 分支，然后打开一次人工审核 PR，不直接改默认分支。审核 `.dsh-compat.yml`、`compatibility/dsh-smoke.yml` 和 workflow 后合并，再用 `gh secret set DEEPSEEK_API_KEY` 在目标仓库录入维修凭据；Secret 只映射给 repair job。若自动发现不了插件 health surface，命令会明确停止，用户补充契约后再提交，不会生成假断言。
+命令只创建并推送 onboarding 分支，然后打开一次人工审核 PR，不直接改默认分支。审核 `.dsh-compat.yml`、`compatibility/dsh-smoke.yml` 和 workflow 后合并，再用 `gh secret set DEEPSEEK_API_KEY` 在目标仓库录入维修凭据。Secret 只在可信默认分支的 repair job，以及 contract 已明确开启真实模型 smoke 时的无 Git 写权 candidate-smoke job 中可见；verifier/publisher 不可见。若自动发现不了插件 health surface，命令会明确停止，用户补充契约后再提交，不会生成假断言。
 
-当前交付默认且只真实验收了人工审核 PR。配置文件中的 30% steer、低价排队、auto-merge/direct-push 和外部通知保留为后续兼容字段，MVP 不执行这些行为；不要因为字段存在就认为已启用。
+交付默认为人工审核 PR；也可显式改为 `auto-merge` 或 `direct-push`。`direct-push` 会直接改默认分支，只适合已接受该风险的仓库。默认 `GITHUB_TOKEN` 创建的 PR 如果被 GitHub 要求人工批准 checks，Guardian 会明确停在 `WAITING_FOR_GITHUB_APPROVAL`；真正无人值守的 auto-merge 需可选 publisher PAT。30% 收敛提醒、低价排队和外部通知均已实现，是否启用仍由仓库配置决定。
 
 V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目的 reusable workflow/orchestrator。无论仓库是原创插件还是魔改 fork，都只维护当前仓库，不自动同步或联系 upstream。
 
@@ -25,6 +25,7 @@ V1 只做“安装进当前插件仓库”：一个薄 workflow 调用本项目�
 - [白皮书](docs/WHITEPAPER.md)
 - [完整落地列表](docs/IMPLEMENTATION_PLAN.md)
 - [历史证据与当前契约](docs/REFERENCE_EVIDENCE.md)
+- [最终验收报告](docs/FINAL_VALIDATION.md)
 - [配置示例](.dsh-compat.example.yml)
 - [长期验收合同](ACCEPTANCE.md)
 - [当前切片状态](STATE.md)
@@ -35,7 +36,7 @@ repair DSH 默认使用项目立项时的 NPM `latest`：`0.1.1-rc.2`，provider
 
 该默认模型由当前 DSH 的 `deepseek-official` provider 声明为 `text + image`，可直接消费截图等视觉证据。DeepSeek 官方联网搜索则是 DSH 的独立 search provider，会产生另一笔模型调用；它不是“视觉模型自带搜索”。默认同样选择上述模型，仓库可以覆盖；搜索缺少 token usage 时只记录调用次数，不为几分钱的误差另造计费系统。
 
-默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，contract 要求的真实模型 smoke 也不等待低价。只有确实需要修代码时才等待低价时段调用 repair DSH。MVP 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；不单独实现 OpenAI-compatible 账单解析。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。交付默认为 PR，同时支持显式开启 `auto-merge` 或 `direct-push`。
+默认在官方低价时段启动模型维修；发现新版后，仓库测试、插件安装、真实 DSH 启动和 smoke 断言立即执行，contract 要求的真实模型 smoke 也不等待低价。只有确实需要修代码时才等待低价时段调用 repair DSH。Guardian 统计 DSH/DeepSeek 暴露的 token usage，并按官方默认价格快照估算人民币；每段 usage 按它实际发生的峰/谷时段累加，不会用当前价格重算历史。这是本地估算门，不是 provider 账单级实时断路器；绝对账户额度仍应在 DeepSeek 官方侧设置。自定义 route 若费率不同可覆盖价格，否则仍报告 token、把人民币标为 unknown。
 
 维修时默认允许改当前仓库内普通插件文件，不要求用户按插件结构维护一长串路径。workflow、Guardian 配置与 lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径不能改；publisher 会在接收 diff 时机械拒绝这些修改。
 

@@ -201,13 +201,9 @@ key 只进入一次性进程环境，没有写进命令、仓库、报告或配�
 
 ## 10. 证据强度边界
 
-截至 2026-08-21 已证明发布制品、M0 本地真实兼容链路、普通模型 route 和 native search；下面这些当时尚未执行，其中公开 Ubuntu 与自动维修已在 2026-08-22 补齐：
+截至 2026-08-21 的证据强度只覆盖发布制品、M0 本地兼容链路、普通模型 route 和 native search，当时不能外推为视觉、公开 Actions 或自动维修已通过。
 
-- `0.1.1-rc.2` 中图片真实进入出站请求的端到端视觉断言；
-- 公开 fixture 的 `ubuntu-24.04` GitHub Actions run、publisher PR 和 durable report URL；
-- Guardian 的跨 run 预算、低价等待、reset、受控故障自动修复和三种交付模式。
-
-图片 smoke 与其余 M3 增强项仍保留为 `ACCEPTANCE.md` 中的 open/partial 项；不得用纯文本模型 probe 或一次 M2 维修外推为完成。
+2026-08-22 已补齐图片真实进入请求、公开 `ubuntu-24.04` 完整链、真实 DSH 维修、跨 run 预算、峰谷时序计价、direct-push、auto-merge 安全等待、external recovery 和合并后 NOOP。对外 email/TG/webhook 和 PAT 无人值守合并仍只能称“实现了 adapter/权限路径”，因本次没有目标或凭据，不得称“已真实投递”。
 
 ## 11. 2026-08-22 公开 M1/M2 证据
 
@@ -222,4 +218,13 @@ key 只进入一次性进程环境，没有写进命令、仓库、报告或配�
 7. 公开 verify/repair artifacts 对 `sk-*`、Authorization/API key、`/Users/` 和 `/home/runner/work/` 的扫描为零命中；artifact 只保存机械报告、补丁、verified lock 和独立 verifier 报告，不保存完整模型对话。
 8. PR #10 人工审计后合并为 fixture `main@3e8590d475031ae0911060ebc7c1ed1e696e47e1`；[run 32560761301](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32560761301) 返回同一 snapshot `NOOP`，repair 与两个 publisher job 均跳过，无开放 PR。合并后的 fixture 原生测试 10/10 PASS。
 
-该证据只把 M2 technical MVP 判为 PASS。30% 运行中 steer、低价排队、跨 run 失败冻结、auto-merge/direct-push、外部通知和 contract-required 视觉 smoke 仍未执行，详见 `STATE.md`。
+上述条目是 M1/M2 历史截面。M3 的后续公开运行和最终边界见 `FINAL_VALIDATION.md`，不再以本历史截面的“当时未完成”作为当前状态。
+
+## 12. 2026-08-22 M3 与最终收敛证据
+
+1. [run 32565423873](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32565423873) 使用 rc.2 DSH Web RPC 完成真实图片/插件输入 smoke，固定 PNG 2,712 bytes，`imageObserved`/`pluginInputObserved` 为 true，非空回答 hash 持久化。
+2. [run 32565934822](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32565934822) 在 `auto-merge` 模式下创建 PR #15，默认 Actions token 权限不足时进入 `WAITING_FOR_GITHUB_APPROVAL`，没有绕过 GitHub；owner 后续启用 auto-merge 成功。
+3. [run 32566086836](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566086836) 在 `direct-push` 模式下由 publisher 直接推入 main，commit 携带 campaign Issue #16 URL，repair/model job 不持 Git 写凭据。
+4. [run 32566217178](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566217178) 在 RPC readiness 暂态 404 时进入 `BLOCKED_EXTERNAL`；修复真实 `session.create` readiness 后 [run 32566532050](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566532050) PASS。
+5. [run 32566922071](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32566922071) 证明各段 usage 按实际峰/谷时段累加：459,577 tokens，0.326965 CNY，`band: mixed`，不用当前低价重算历史。
+6. PR #19 合并后 [run 32567069724](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/32567069724) 只运行无模型 verifier 与 Summary，repair/model-smoke/publish 全部 skipped，证明 campaign 最终收敛。
