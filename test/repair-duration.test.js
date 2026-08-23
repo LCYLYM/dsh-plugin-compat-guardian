@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { independentVerifierEvidence } from '../lib/repair.js';
+import { CommandError } from '../lib/errors.js';
+import { classifyRepairFailure, independentVerifierEvidence } from '../lib/repair.js';
 
 test('repair evidence reports the independent verifier duration', () => {
   const evidence = independentVerifierEvidence({
@@ -33,4 +34,22 @@ test('repair evidence keeps a failed verifier code and ignores invalid durations
   assert.equal(evidence.ok, false);
   assert.equal(evidence.durationMs, 250);
   assert.equal(evidence.errorCode, 'COMMAND_FAILED');
+});
+
+test('a verifier command mentioning 401 is not misreported as a model credential failure', () => {
+  const error = new CommandError({
+    displayCommand: 'npm test',
+    exitCode: 1,
+    stdout: 'fixture expected HTTP 401 but received a different response',
+    stderr: '',
+    durationMs: 123,
+  });
+
+  const verifierFailure = classifyRepairFailure(error, 'independent-verifier');
+  assert.equal(verifierFailure.code, 'REPAIR_VERIFIER_COMMAND_FAILED');
+  assert.equal(verifierFailure.status, 'BLOCKED');
+
+  const modelFailure = classifyRepairFailure(error, 'model-call');
+  assert.equal(modelFailure.code, 'MODEL_CREDENTIAL_REJECTED');
+  assert.equal(modelFailure.status, 'BLOCKED_CONFIG');
 });
