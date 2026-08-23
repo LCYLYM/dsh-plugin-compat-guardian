@@ -50,6 +50,8 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
   assert.match(workflow.jobs['publish-repair'].if, /outputs\.status == 'PASS'/);
   assert.match(workflow.jobs['publish-blocked-state'].if, /BLOCKED_CONFIG.*BLOCKED_EXTERNAL.*BLOCKED_CONTRACT/);
   assert.match(workflow.jobs['publish-model-smoke-state'].if, /BLOCKED_CONFIG.*BLOCKED_EXTERNAL/);
+  assert.match(workflow.jobs.repair.if, /HOST_VERSION_UNSUPPORTED/);
+  assert.match(workflow.jobs['unsupported-failure'].if, /HOST_VERSION_UNSUPPORTED/);
   for (const jobName of ['publish', 'publish-repair', 'notify']) {
     const pipedSteps = workflow.jobs[jobName].steps.filter(step => typeof step.run === 'string' && step.run.includes('| tee'));
     assert.ok(pipedSteps.length > 0, `${jobName} should have a piped summary step`);

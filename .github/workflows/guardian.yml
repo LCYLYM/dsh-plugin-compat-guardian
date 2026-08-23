@@ -351,7 +351,7 @@ jobs:
       needs.verify.result == 'success' &&
       needs.verify.outputs.status == 'BLOCKED' &&
       needs.verify.outputs.repair_eligible == 'true' &&
-      contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED"]'), needs.verify.outputs.error_code)
+      contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED","HOST_VERSION_UNSUPPORTED"]'), needs.verify.outputs.error_code)
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 75
     permissions:
@@ -606,7 +606,7 @@ jobs:
     if: >-
       needs.verify.result == 'success' &&
       needs.verify.outputs.status == 'BLOCKED' &&
-      !contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED"]'), needs.verify.outputs.error_code)
+      !contains(fromJSON('["COMMAND_FAILED","WEB_EXITED","WEB_TIMEOUT","SMOKE_ASSERTION_FAILED","PLUGIN_NOT_ACTIVATED","HOST_VERSION_UNSUPPORTED"]'), needs.verify.outputs.error_code)
     runs-on: ${{ inputs.runner }}
     permissions: {}
     steps:
