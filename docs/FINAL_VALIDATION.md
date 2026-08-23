@@ -1,22 +1,23 @@
 # V1 最终验收报告
 
-日期：2026-08-22  
+日期：2026-08-23
 自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
 社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
 模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
 模型错误/防循环专项验收 SHA：`236252455e05acca890a28ff566c9a6916169f76`
+社区真实维修与错误分类修复 SHA：`3de35600566ad1f4ff318e2de3d99de48b6ec72a`
 实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`
 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)
 
 ## 结论
 
-V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。
+V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。除 fixture 外，四个社区 fork 都完成了 rc.2 repair DSH 调用、实际 diff、独立 rc.2 verifier、自动 PR、合并和无模型收敛。
 
 验收不把“已实现可选 adapter”写成“已给外部收件人投递”；本次没有 email/TG/webhook 目标和 publisher PAT，所以这些只有确定性测试或安全等待证据。
 
 ## 模型错误与防循环专项（2026-08-22）
 
-本轮对旧版 46/46 之外新增了配置、凭据、路由和状态去重回归，`npm run check` 现为 71/71 PASS。
+本轮对旧版 46/46 之外新增了配置、凭据、路由、状态去重、宿主版本边界、真实 verifier 耗时和分阶段错误归类回归，`npm run check` 现为 79/79 PASS。
 
 `npm run test:real-route` 使用真实 `@deepseek-ai/dsh@0.1.1-rc.2` 和本地 OpenAI-compatible HTTP 端点，不是 mock DSH：
 
@@ -70,7 +71,7 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 
 ## 确定性验证
 
-`npm run check` 通过 71/71 项测试，包括：
+`npm run check` 通过 79/79 项测试，包括：
 
 - usage 去重、峰/谷价格、历史费用累加和未知 route；
 - `N -> Y` 单次 reset、增加额度恢复、低价等待、手工 bypass、30% 一次收敛和四类上限；
@@ -80,19 +81,47 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 - onboarding 发现、完整 SHA 强制、Node/包管理器冲突阻断和 workflow 分 job 最小权限。
 - 中文报告可扫读性、onboarding 失败的下一步说明、monorepo workspace 逃逸阻断与 workspace manifest diff policy。
 - 带 scoped-package 构建日志的 `npm pack --json` 解析回归；该问题先在真实 `dsh-web-ui` 验证中复现再修复。
+- repair 报告汇总独立 verifier 每个步骤的真实耗时，不再显示 `0.00s`。
+- 独立 verifier 命令输出即使包含 `401/403` 字样，也不能误报为模型 Key 错误；模型调用阶段的真 401 仍保持 `BLOCKED_CONFIG`。
 
-## 社区仓库回归
+## 四个社区 fork 的真实 AI 维修
 
-| 样本 | 精确测试面 | 结果 |
-| --- | --- | --- |
-| [Whale Report run 32570423087](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) / [PR #1](https://github.com/LCYLYM/dsh-whale-report/pull/1) | 仓库测试/构建、pack/add/dump/web、`/whale/api/list`、remove | PASS |
-| [`dsh-web-ui` run 32570426593](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) / [PR #1](https://github.com/LCYLYM/dsh-web-ui/pull/1) | pnpm monorepo 根安装，`packages/dsh-skill-explorer` 测试/构建/打包，health 断言 | PASS |
-| [Ankh Guard run 32570430758](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) / [PR #1](https://github.com/LCYLYM/dsh-ankh-guard/pull/1) | 测试/构建、pack/add/dump/web/remove | PASS；不宣称 watchdog 行为已验收 |
-| [Office run 32570428991](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | 首次基线的 frozen install | `ONBOARDING_BLOCKED`；`@deepseek-ai/dsh-type-meta@0.0.1-rc.1` 已从 NPM 撤下，没有进入模型修复 |
+先说边界：rc.1 到 rc.2 对这四个插件的实际 API 没有找到可稳定复现的自然破坏。因此 fork 采用透明的 `package.json#dsh.compat.maxHost=0.1.1-rc.1` 表示“只人工审核到 rc.1”。Guardian 先对同仓库建立 rc.1 PASS 基线，再让 rc.2 repair DSH 自己检查源码/测试并放宽边界，最后由无 Key 独立 verifier 重跑 rc.2 完整 gate。
 
-本轮没有找到一个“上游未修、对当前 NPM latest rc.2 可安装且真实回归”的社区 commit。Whale Report 历史中标注的新 harness 修复，其修复前 commit 对 rc.2 实测仍 PASS；不用提交说明替代当前运行事实。因此社区样本用于异构回归和诚实阻断证据，真实自动修复成功案例仍由受控公开 fixture 的 run 32560587541 / PR #10 承担。
+这证明真实模型调用、diff、复验、PR 和收敛；不声称社区上游代码原本已在 rc.2 上损坏。没有用语法错误、强制失败测试或假 provider 制造结果。
 
-三个 PASS 社区 fork 的第一次 publisher 在仓库尚未打开“Actions 创建 PR”开关时正确停在 `WAITING_FOR_GITHUB_APPROVAL`；表中 PR 按该回退路径手工打开。他们证明产物可合并，不写成 Actions 自动建 PR。
+| 样本 | 真实 repair run / PR | 模型耗时 | 独立 verifier | campaign usage / 估算费用 | 实际修改 |
+| --- | --- | ---: | ---: | ---: | --- |
+| Whale Report | [run 32630631684](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32630631684) / [PR #5](https://github.com/LCYLYM/dsh-whale-report/pull/5) | 175.12s | 21.97s | 724,396 / 0.192735 CNY | `package.json` maxHost rc.1 → rc.2 |
+| dsh-web-ui / Skill Explorer | [run 32630635364](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32630635364) / [PR #5](https://github.com/LCYLYM/dsh-web-ui/pull/5) | 289.62s | 16.97s | 1,725,399 / 0.456854 CNY | workspace manifest maxHost rc.1 → rc.2；搜索 3 次 |
+| Ankh Guard | [run 32630643094](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32630643094) / [PR #5](https://github.com/LCYLYM/dsh-ankh-guard/pull/5) | 208.23s | 120.27s | 979,997 / 0.263889 CNY | `package.json` maxHost rc.1 → rc.2；搜索 1 次 |
+| Better Sidebar Office | [run 32631118927](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32631118927) / [PR #5](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/pull/5) | 155.24s | 36.47s | 1,530,515 / 0.448452 CNY | `package.json` maxHost rc.1 → rc.2；搜索 1 次 |
+
+Office 的 usage/费用是 epoch 2 累计值，包括同一 campaign 中前一次被误分类的调用，不是表中 155.24s 单次模型步骤的独立 token 值。首次 Office rc.2 run 的模型步骤 exit code 为 0，但尚未生成 verifier artifact 就被报成 Key 401/403；代码审计由此定位到总 catch 可能把后续命令输出中的同类字样误归类为模型凭据错误。`3de3560` 把模型调用与 verifier 阶段分开归类后，Office 公开 run 成功。
+
+四次成功 run 从触发到结束分别约 5分43秒、7分40秒、11分14秒、6分26秒，平均约 7分46秒。只看模型步骤平均约 3分27秒；只看独立 verifier 平均约 48.92 秒。之前 145 秒的 fixture 是小插件单样本，不是复杂插件的平均维修时间。
+
+合并后的四次收敛 run 全部 PASS，且 repair/model-smoke/publish 全部 skipped：
+
+- [Whale 32631189755](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32631189755)
+- [Web UI 32631193642](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32631193642)
+- [Ankh 32631197050](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32631197050)
+- [Office 32631458431](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32631458431)
+
+最早的 `325704…` 社区 run 只能证明机械兼容检查/`ONBOARDING_BLOCKED`，并没有真实 AI 修复。它们不再被当成社区 AI 成功案例。
+
+### 测试后停机回读
+
+2026-08-23 完成合并和收敛验证后，对四个 fork 逐仓库执行 `gh workflow disable dsh-compat.yml` 和 `gh secret delete DEEPSEEK_API_KEY`。第二次独立回读为：
+
+| 仓库 | workflow state | `DEEPSEEK_API_KEY` 数量 | in-progress | queued |
+| --- | --- | ---: | ---: | ---: |
+| dsh-whale-report | `disabled_manually` | 0 | 0 | 0 |
+| dsh-web-ui | `disabled_manually` | 0 | 0 | 0 |
+| dsh-plugin-better-sidebar-plugin-office | `disabled_manually` | 0 | 0 | 0 |
+| dsh-ankh-guard | `disabled_manually` | 0 | 0 | 0 |
+
+四个 fork 保留 workflow 文件、去敏公开 run 和已合并维修提交作为证据，但已不会自动处理后续 DSH 发版。
 
 ## 提交历史与公开日志去敏审计
 
@@ -105,6 +134,8 @@ V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自�
 - 当前专项验收文档 diff：0 命中。
 
 上述模式包含 DeepSeek/GitHub/NPM/AWS/Slack 常见 token 形态、用户本机绝对路径、Codex 会话目录和原参考工程私有路径。
+
+2026-08-23 社区真实维修完成后又做了一次增量回读：Guardian 和四个 fork 在本轮所有新 commit patch 与 commit message 中，对 32 位 DeepSeek key、GitHub token、Bearer token 和本机路径的匹配数均为 0。Whale/Web 当前树中的通用模式命中仅位于上游原有的 credential/redaction 测试 fixture，本轮 patch 并未改动它们。四个真实 repair run 、四个合并后收敛 run，以及 Office 一次失败 run 的公开日志逐份扫描均为 0 命中。停机后又从 GitHub 回读确认四仓库的 `DEEPSEEK_API_KEY` 均已删除。
 
 ## 验收边界
 

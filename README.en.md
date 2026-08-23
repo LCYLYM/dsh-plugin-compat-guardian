@@ -13,15 +13,15 @@
 
 The official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) repository currently labels DSH a developer preview and warns about breaking changes. Guardian focuses on one job: prove that a plugin still installs, boots and behaves on the latest DSH; if a verified regression exists, repair it safely.
 
-## Install in 60 seconds
+## Production install: put Guardian in the plugin repository
 
 Run this from a clean plugin repository with Node 24 and an authenticated `gh` CLI:
 
 ```bash
 npm exec --yes \
-  --package=github:LCYLYM/dsh-plugin-compat-guardian#317e9858dedf2c16c24558b9d448ac7b24190b41 \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#3de35600566ad1f4ff318e2de3d99de48b6ec72a \
   -- dsh-plugin-compat-guardian onboard \
-  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@317e9858dedf2c16c24558b9d448ac7b24190b41
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@3de35600566ad1f4ff318e2de3d99de48b6ec72a
 ```
 
 The command opens one onboarding PR; it does not modify the default branch directly. Review the generated config, plugin-specific smoke contract, and immutable 40-character Guardian SHA. Then configure the repository:
@@ -35,6 +35,19 @@ gh api --method PUT repos/{owner}/{repo}/actions/permissions/workflow \
 ```
 
 The second command lets Actions create maintenance PRs while keeping default workflow permissions read-only. Without it, Guardian can still push the verified branch and stops at `WAITING_FOR_GITHUB_APPROVAL` for a human to open the PR.
+
+### Production repository versus a one-off test fork
+
+| | Plugin repository | One-off fork lab |
+| --- | --- | --- |
+| Purpose | Follow DSH `latest` over time | Prove one real AI-repair loop |
+| Trigger | Six-hour schedule plus manual runs | `workflow_dispatch` only |
+| Secret | Set it in the plugin repository | Forks do not inherit Secrets; set it separately in the fork |
+| Finish | Keep the workflow active | Disable the workflow and delete the test Secret |
+
+If the plugin already passes on the new DSH, Guardian correctly performs a no-model verification. That proves it avoids unnecessary spending; it does not prove AI repair. A repair exercise must show non-zero model usage, an actual worktree diff, a non-zero independent-verifier duration, a final PASS, and a reviewable PR.
+
+The step-by-step fork procedure, controlled reviewed-host-boundary example, acceptance checks, and shutdown commands are in the [real AI repair fork tutorial](docs/FORK_TESTING.md).
 
 ## How it works
 
@@ -86,14 +99,14 @@ See [`.dsh-compat.example.yml`](.dsh-compat.example.yml) for the complete config
 | Fixture | Result | Boundary proved |
 | --- | --- | --- |
 | [`dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) | Real auto-repair | Controlled incompatibility → DSH repair → independent verification → PR, plus visual smoke, direct push, auto-merge safety and NOOP evidence |
-| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) / [PR #1](https://github.com/LCYLYM/dsh-whale-report/pull/1) | PASS | Real plugin API assertion and install/boot/remove round trip |
-| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) / [PR #1](https://github.com/LCYLYM/dsh-web-ui/pull/1) | PASS | A package selected from a large pnpm monorepo |
-| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) / [PR #1](https://github.com/LCYLYM/dsh-ankh-guard/pull/1) | PASS | Install/composition/web boot; this does not claim watchdog behavior coverage |
-| [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | ONBOARDING_BLOCKED | A withdrawn historical package blocks a trustworthy baseline, so no model repair is attempted |
+| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report) | Real repair exercise | Old-version baseline, rc.2 repair DSH, independent verification and PR |
+| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui) | Real repair exercise | A package selected from a large pnpm monorepo |
+| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard) | Real repair exercise | Install/composition/web boot; this does not claim watchdog behavior coverage |
+| [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office) | Real repair exercise | A reproducible fork baseline after withdrawn-package and local Windows-link cleanup |
 
 Reports are Chinese-first and human-scannable. They persist sanitized command evidence, hashes, status, duration and usage—never API keys, authorization headers, full model conversations or private local paths.
 
-The three community PRs were opened manually through Guardian's documented `WAITING_FOR_GITHUB_APPROVAL` fallback because their first runs finished before the repository setting allowed Actions-created PRs. They are not presented as bot-created PRs; fixture PRs #10/#19 provide that evidence.
+The exact latest community run/PR outcomes are recorded in the [final validation report](docs/FINAL_VALIDATION.md). Older runs that only performed mechanical checks or stopped during onboarding are not presented as AI repair successes.
 
 ## Scope and risk
 
@@ -110,6 +123,7 @@ The three community PRs were opened manually through Guardian's documented `WAIT
 - [Requirement-to-implementation matrix](docs/IMPLEMENTATION_PLAN.md)
 - [Scope/deviation audit](docs/SCOPE_AUDIT.md)
 - [Final validation](docs/FINAL_VALIDATION.md)
+- [Real AI repair fork tutorial](docs/FORK_TESTING.md)
 - [Historical evidence](docs/REFERENCE_EVIDENCE.md)
 - [Acceptance contract](ACCEPTANCE.md) · [Current state](STATE.md)
 
@@ -120,4 +134,4 @@ npm ci
 npm run check
 ```
 
-Current local suite: 46/46 passing. MIT licensed.
+Current local suite: 79/79 passing, plus a real DSH rc.2 custom-route/failure-endpoint probe. MIT licensed.

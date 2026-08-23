@@ -13,15 +13,15 @@
 
 > [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 官方将当前阶段标为 developer preview，并明确提醒可能有破坏性变更。Guardian 只解决这一个问题：**DSH 更新后，插件还能否安装、启动和工作？不能时能否自动修好？**
 
-## 60 秒安装
+## 正式安装：放进你的插件仓库
 
 要求：目标插件仓库已有可运行的测试/构建命令，本机已登录 `gh`，工作树干净。
 
 ```bash
 npm exec --yes \
-  --package=github:LCYLYM/dsh-plugin-compat-guardian#317e9858dedf2c16c24558b9d448ac7b24190b41 \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#3de35600566ad1f4ff318e2de3d99de48b6ec72a \
   -- dsh-plugin-compat-guardian onboard \
-  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@317e9858dedf2c16c24558b9d448ac7b24190b41
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@3de35600566ad1f4ff318e2de3d99de48b6ec72a
 ```
 
 这条命令会打开一个 onboarding PR，不会直接改默认分支。你只需首次审核三件事：
@@ -43,6 +43,19 @@ gh api --method PUT repos/{owner}/{repo}/actions/permissions/workflow \
 ```
 
 > 不想让 Actions 建 PR 也可以。Guardian 会推送已验证分支并停在 `WAITING_FOR_GITHUB_APPROVAL`，你手工开 PR 即可。
+
+### 原仓库和 fork 测试仓库有什么不同？
+
+| | 插件原仓库 | 只用来试 Guardian 的 fork |
+| --- | --- | --- |
+| 目标 | 长期自动跟进 DSH `latest` | 证明一次真实 AI 维修闭环 |
+| 触发 | 保留每 6 小时和手动检查 | 只保留 `workflow_dispatch` |
+| Secret | 在原仓库设置 | fork 不会继承 Secret，必须在 fork 里单独设置 |
+| 交付 | 默认产出可审核 PR | 测完合并测试 PR，然后停 workflow 并删 Secret |
+
+如果插件对新 DSH 本来就兼容，Guardian 只跑确定性验证，**不调 AI**；这是正常的生产行为，不能拿来证明“AI 修过了”。要做真实维修演练，先建立旧 DSH 的 PASS 基线，再让新 DSH 触发可解释的兼容边界，最后必须看到非零模型 usage、代码 diff、独立 verifier 耗时和可合并 PR。
+
+完整操作和本项目的四个公开 fork 案例见 [fork 真实 AI 维修测试教程](docs/FORK_TESTING.md)。
 
 ## 它实际做什么
 
@@ -128,14 +141,14 @@ CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSe
 | 样本 | 结果 | 当前证明的边界 |
 | --- | --- | --- |
 | [`dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture) | ✅ 真实自动修复 | 受控不兼容 → DSH 维修 → 独立复验 → PR，另有视觉 smoke/direct-push/auto-merge/NOOP 证据 |
-| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report/actions/runs/32570423087) / [PR #1](https://github.com/LCYLYM/dsh-whale-report/pull/1) | ✅ PASS | 真实插件 API 断言、安装/启动/卸载 |
-| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui/actions/runs/32570426593) / [PR #1](https://github.com/LCYLYM/dsh-web-ui/pull/1) | ✅ PASS | 大型 pnpm monorepo 中的 Skill Explorer package |
-| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/32570430758) / [PR #1](https://github.com/LCYLYM/dsh-ankh-guard/pull/1) | ✅ PASS | 新于当前宿主的 peer cohort 仍能安装、组合、启动；不等于 watchdog 行为验收 |
-| [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/32570428991) | 🛑 ONBOARDING_BLOCKED | 历史 lock 依赖已从 NPM 撤下；没有可信基线，正确不调模型 |
+| [`dsh-whale-report` fork](https://github.com/LCYLYM/dsh-whale-report) | 🧪 真实维修演练 | 旧版 PASS 基线、rc.2 repair DSH、独立复验与 PR |
+| [`dsh-web-ui` fork](https://github.com/LCYLYM/dsh-web-ui) | 🧪 真实维修演练 | 大型 pnpm monorepo 中的 Skill Explorer package |
+| [`dsh-ankh-guard` fork](https://github.com/LCYLYM/dsh-ankh-guard) | 🧪 真实维修演练 | 安装/组合/web 启动；不宣称 watchdog 行为已验收 |
+| [`better-sidebar-office` fork](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office) | 🧪 真实维修演练 | 额外先修复上游已撤包和 Windows 本地 link，再建可复现基线 |
 
 完整运行 ID、PR、实际 token/估算 CNY 和尚未绑定的可选外部渠道，见 [最终验收报告](docs/FINAL_VALIDATION.md)。
 
-> 三个社区 PR 是按第一次 run 给出的 `WAITING_FOR_GITHUB_APPROVAL` 回退路径手工打开；不写成 Actions 自动建 PR。机器人自动建 PR 的真实证据是 fixture PR #10/#19。
+> 社区 fork 的详细结果以 [最终验收报告](docs/FINAL_VALIDATION.md) 中列出的最新 run/PR 为准。旧 run 中只跑了机械兼容检查或 onboarding 阻断的，不写成 AI 维修成功。
 
 ## 边界和风险
 
@@ -152,6 +165,7 @@ CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSe
 - [完整需求与落地对照](docs/IMPLEMENTATION_PLAN.md)
 - [原设计偏离/缺失/多做审计](docs/SCOPE_AUDIT.md)
 - [最终验收报告](docs/FINAL_VALIDATION.md)
+- [fork 真实 AI 维修测试教程](docs/FORK_TESTING.md)
 - [历史证据](docs/REFERENCE_EVIDENCE.md)
 - [长期验收合同](ACCEPTANCE.md) · [当前状态](STATE.md)
 
@@ -162,4 +176,4 @@ npm ci
 npm run check
 ```
 
-当前本地套件：71/71 通过；另有真实 DSH rc.2 自定义 route/故障端点探针。项目采用 MIT License。
+当前本地套件：79/79 通过；另有真实 DSH rc.2 自定义 route/故障端点探针。项目采用 MIT License。
