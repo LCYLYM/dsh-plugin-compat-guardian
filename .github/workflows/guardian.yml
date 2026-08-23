@@ -291,6 +291,7 @@ jobs:
           GH_TOKEN: ${{ secrets.publisher_token || github.token }}
           GUARDIAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
+          set -o pipefail
           node guardian/bin/dsh-plugin-compat-guardian.js publish \
             --repo "$GITHUB_WORKSPACE/target" \
             --evidence "$GITHUB_WORKSPACE/evidence" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -488,6 +489,7 @@ jobs:
           GH_TOKEN: ${{ secrets.publisher_token || github.token }}
           GUARDIAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
+          set -o pipefail
           node guardian/bin/dsh-plugin-compat-guardian.js publish \
             --repo "$GITHUB_WORKSPACE/target" \
             --evidence "$GITHUB_WORKSPACE/repair-evidence" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -676,6 +678,7 @@ jobs:
           GUARDIAN_TELEGRAM_CHAT_ID: ${{ secrets.telegram_chat_id }}
           GUARDIAN_WEBHOOK_URL: ${{ secrets.notification_webhook_url }}
         run: |
+          set -o pipefail
           report="$GITHUB_WORKSPACE/notification-evidence/verify/report.json"
           if [[ -f "$GITHUB_WORKSPACE/notification-evidence/repair/report.json" ]]; then
             report="$GITHUB_WORKSPACE/notification-evidence/repair/report.json"

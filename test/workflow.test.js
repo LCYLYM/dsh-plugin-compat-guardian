@@ -50,6 +50,13 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
   assert.match(workflow.jobs['publish-repair'].if, /outputs\.status == 'PASS'/);
   assert.match(workflow.jobs['publish-blocked-state'].if, /BLOCKED_CONFIG.*BLOCKED_EXTERNAL.*BLOCKED_CONTRACT/);
   assert.match(workflow.jobs['publish-model-smoke-state'].if, /BLOCKED_CONFIG.*BLOCKED_EXTERNAL/);
+  for (const jobName of ['publish', 'publish-repair', 'notify']) {
+    const pipedSteps = workflow.jobs[jobName].steps.filter(step => typeof step.run === 'string' && step.run.includes('| tee'));
+    assert.ok(pipedSteps.length > 0, `${jobName} should have a piped summary step`);
+    for (const step of pipedSteps) {
+      assert.match(step.run, /set -o pipefail/, `${jobName} must preserve the producer exit status`);
+    }
+  }
   assert.match(source, /refs\/heads\/automation\/dsh-compat\/\$safe_version/);
   const repairPending = workflow.jobs.repair.steps.find(step => step.id === 'pending');
   assert.match(repairPending.run, /state_branch=.*state\/\$safe_version/);
