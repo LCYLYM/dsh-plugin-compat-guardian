@@ -48,3 +48,10 @@ test('enabled adapters send only the sanitized event to their configured endpoin
   assert.match(requests[1].body.text, /目标 DSH：0\.1\.1-rc\.2/);
   assert.deepEqual(requests[2].body, event);
 });
+
+test('notifier keeps GitHub issue delivery best-effort for restricted forks', async () => {
+  const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../lib/notifier.js', import.meta.url), 'utf8'));
+
+  assert.match(source, /githubIssue: 'UNAVAILABLE'/);
+  assert.match(source, /adapters: await sendConfiguredAdapters\(event, config\)/);
+});
