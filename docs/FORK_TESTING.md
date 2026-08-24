@@ -112,13 +112,17 @@ gh workflow disable WORKFLOW_ID --repo "$REPO"
 # 删除 fork 中的测试 Key
 gh secret delete DEEPSEEK_API_KEY --repo "$REPO"
 
-# 回读确认：所有 workflow 均应为 disabled_manually，Secret 列表不应再有该项
+# 一次性测试 fork：关闭仓库级 Actions 总开关，阻止现有和以后新增的 workflow 运行
+gh api --method PUT "repos/$REPO/actions/permissions" -F enabled=false
+
+# 回读确认：总开关必须为 false，所有 workflow 均应为 disabled_manually，Secret 不应再有该项
+gh api "repos/$REPO/actions/permissions" --jq '.enabled'
 gh api "repos/$REPO/actions/workflows?per_page=100" \
   --jq '.workflows[] | [.name, .path, .state] | @tsv'
 gh secret list --repo "$REPO"
 ```
 
-保留 workflow 文件和去敏的 Actions 报告没问题；历史 run 仍会显示在 Actions 页面，但不代表它还在运行。只有当 fork 中所有 workflow 都停用、活跃/排队 run 为 0 且 Secret 已删除，才算完成测试停机。
+保留 workflow 文件和去敏的 Actions 报告没问题；历史 run 仍会显示在 Actions 页面，但不代表它还在运行。只有当仓库级 Actions 总开关为 `false`、全部 workflow 已停用、活跃/排队 run 为 0 且 Secret 已删除，才算完成一次性测试 fork 停机。以后若要继续测试，可在仓库 Settings → Actions → General 重新允许 Actions，再只启用本次需要的 workflow。
 
 ## 本项目的公开 fork 案例
 

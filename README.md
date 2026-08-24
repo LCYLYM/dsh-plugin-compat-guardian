@@ -51,7 +51,7 @@ gh api --method PUT repos/{owner}/{repo}/actions/permissions/workflow \
 | 目标 | 长期自动跟进 DSH `latest` | 证明一次真实 AI 维修闭环 |
 | 触发 | 保留每 6 小时和手动检查 | 只保留 `workflow_dispatch` |
 | Secret | 在原仓库设置 | fork 不会继承 Secret，必须在 fork 里单独设置 |
-| 交付 | 默认产出可审核 PR | 测完合并测试 PR，然后停用 fork 中全部 workflow 并删 Secret |
+| 交付 | 默认产出可审核 PR | 测完合并测试 PR，然后关闭 fork 的 Actions 总开关并删 Secret |
 
 如果插件对新 DSH 本来就兼容，Guardian 只跑确定性验证，**不调 AI**；这是正常的生产行为，不能拿来证明“AI 修过了”。要做真实维修演练，先建立旧 DSH 的 PASS 基线，再让新 DSH 触发可解释的兼容边界，最后必须看到非零模型 usage、代码 diff、独立 verifier 耗时和可合并 PR。
 

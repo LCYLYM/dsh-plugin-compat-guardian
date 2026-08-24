@@ -1,12 +1,12 @@
 # State
 
-日期：2026-08-23
+日期：2026-08-24
 
 项目阶段：V1 实现完成，主链路已在公开仓库真实验证。默认交付人工审核 PR；`auto-merge` 和 `direct-push` 需仓库显式开启。
 
 2026-08-22 专项审计修复已 PASS：模型配置/外部错误持久化、未合并维修 PR 去重、自定义 DSH route、严格配置验证和失败 verified 不前移均已落地。
 
-2026-08-23 四个社区 fork 真实 AI 维修已 PASS：rc.2 repair DSH 实际调用、一文件兼容 diff、独立 rc.2 verifier、自动 PR、合并后无模型收敛均有公开证据。测试 Key 已删除。2026-08-24 发现首次停机只关闭 Guardian，未关闭 fork 从上游继承的其他 Actions；现已枚举并停用四仓库全部 workflow，回读 active workflow、活跃/排队 run 与 DeepSeek Key 数量均为 0。
+2026-08-23 四个社区 fork 真实 AI 维修已 PASS：rc.2 repair DSH 实际调用、一文件兼容 diff、独立 rc.2 verifier、自动 PR、合并后无模型收敛均有公开证据。测试 Key 已删除。2026-08-24 发现首次停机只关闭 Guardian，未关闭 fork 从上游继承的其他 Actions；现已枚举并停用四仓库全部 workflow，并经用户明确授权关闭四仓库的 Actions 总开关。逐仓回读均为 `enabled=false`；active workflow、活跃/排队 run 与 DeepSeek Key 数量均为 0。
 
 ## 已实现
 
