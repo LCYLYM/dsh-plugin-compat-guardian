@@ -42,6 +42,12 @@ on:
 
 不要在一次性 fork 中保留 `schedule`。这样只有你点击 Run workflow 时才会运行。
 
+注意：fork 会连同上游的其他 workflow 文件一起复制。它们可能自带 `schedule`，即使 Guardian 已停用也会继续运行。一次性测试 fork 应在开始前就枚举全部 workflow，只临时启用本次需要的 Guardian：
+
+```bash
+gh workflow list --all --repo YOUR_NAME/PLUGIN_REPO
+```
+
 ## 二、先建立旧 DSH 的真实 PASS 基线
 
 在薄 workflow 中临时锁定一个旧版，例如：
@@ -97,16 +103,22 @@ REPO=YOUR_NAME/PLUGIN_REPO
 gh run list --repo "$REPO" --workflow dsh-compat.yml
 gh run cancel RUN_ID --repo "$REPO"
 
-# 停用 workflow，并删除 fork 中的测试 Key
-gh workflow disable dsh-compat.yml --repo "$REPO"
+# 先枚举 fork 中的全部 workflow，包括从上游继承的 CI/定时任务
+gh workflow list --all --repo "$REPO"
+
+# 对列表中每个仍为 active 的 workflow 逐一执行；优先用精确 ID
+gh workflow disable WORKFLOW_ID --repo "$REPO"
+
+# 删除 fork 中的测试 Key
 gh secret delete DEEPSEEK_API_KEY --repo "$REPO"
 
-# 回读确认：workflow 应为 disabled_manually，Secret 列表不应再有该项
-gh api "repos/$REPO/actions/workflows/dsh-compat.yml" --jq .state
+# 回读确认：所有 workflow 均应为 disabled_manually，Secret 列表不应再有该项
+gh api "repos/$REPO/actions/workflows?per_page=100" \
+  --jq '.workflows[] | [.name, .path, .state] | @tsv'
 gh secret list --repo "$REPO"
 ```
 
-保留 workflow 文件和去敏的 Actions 报告没问题；停用 workflow 与删除 Secret 后，fork 不会继续自动处理新 DSH。
+保留 workflow 文件和去敏的 Actions 报告没问题；历史 run 仍会显示在 Actions 页面，但不代表它还在运行。只有当 fork 中所有 workflow 都停用、活跃/排队 run 为 0 且 Secret 已删除，才算完成测试停机。
 
 ## 本项目的公开 fork 案例
 

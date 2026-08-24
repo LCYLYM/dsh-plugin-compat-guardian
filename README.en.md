@@ -43,7 +43,7 @@ The second command lets Actions create maintenance PRs while keeping default wor
 | Purpose | Follow DSH `latest` over time | Prove one real AI-repair loop |
 | Trigger | Six-hour schedule plus manual runs | `workflow_dispatch` only |
 | Secret | Set it in the plugin repository | Forks do not inherit Secrets; set it separately in the fork |
-| Finish | Keep the workflow active | Disable the workflow and delete the test Secret |
+| Finish | Keep the workflow active | Disable every workflow in the fork and delete the test Secret |
 
 If the plugin already passes on the new DSH, Guardian correctly performs a no-model verification. That proves it avoids unnecessary spending; it does not prove AI repair. A repair exercise must show non-zero model usage, an actual worktree diff, a non-zero independent-verifier duration, a final PASS, and a reviewable PR.
 

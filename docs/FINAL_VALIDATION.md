@@ -112,16 +112,16 @@ Office 的 usage/费用是 epoch 2 累计值，包括同一 campaign 中前一�
 
 ### 测试后停机回读
 
-2026-08-23 完成合并和收敛验证后，对四个 fork 逐仓库执行 `gh workflow disable dsh-compat.yml` 和 `gh secret delete DEEPSEEK_API_KEY`。第二次独立回读为：
+2026-08-23 完成合并和收敛验证后，最初只停用了 `dsh-compat.yml`。2026-08-24 用户发现 `dsh-web-ui` 从上游继承的 `contributors.yml` 仍按 schedule 触发，证明“只停 Guardian”不等于“测试 fork 全部停机”。随后枚举四仓库的全部 workflow，逐一停用所有 active 项，并再次回读 Secret 与 run 状态：
 
-| 仓库 | workflow state | `DEEPSEEK_API_KEY` 数量 | in-progress | queued |
+| 仓库 | active workflows | `DEEPSEEK_API_KEY` 数量 | in-progress | queued |
 | --- | --- | ---: | ---: | ---: |
-| dsh-whale-report | `disabled_manually` | 0 | 0 | 0 |
-| dsh-web-ui | `disabled_manually` | 0 | 0 | 0 |
-| dsh-plugin-better-sidebar-plugin-office | `disabled_manually` | 0 | 0 | 0 |
-| dsh-ankh-guard | `disabled_manually` | 0 | 0 | 0 |
+| dsh-whale-report | 0（CI 与 Guardian 均为 `disabled_manually`） | 0 | 0 | 0 |
+| dsh-web-ui | 0（7 个 workflow 均为 `disabled_manually`） | 0 | 0 | 0 |
+| dsh-plugin-better-sidebar-plugin-office | 0（Guardian 为 `disabled_manually`） | 0 | 0 | 0 |
+| dsh-ankh-guard | 0（Guardian 为 `disabled_manually`） | 0 | 0 | 0 |
 
-四个 fork 保留 workflow 文件、去敏公开 run 和已合并维修提交作为证据，但已不会自动处理后续 DSH 发版。
+四个 fork 保留 workflow 文件、去敏公开 run 和已合并维修提交作为证据。Actions 页面仍会显示停机前的历史 run，但现在没有任何 active workflow，不会再因 schedule、push 或 PR 自动运行。
 
 ## 提交历史与公开日志去敏审计
 
