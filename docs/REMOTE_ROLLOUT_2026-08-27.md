@@ -70,7 +70,7 @@ Guardian 自身测试为 80/80 PASS；同一纯文字 contract 的真实模型 s
 ## 旧 PR 和新 PR
 
 - 按用户授权关闭旧 [PR #20](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/20)，原因和新纯文字 smoke 的替代关系已通过 PR comment 留痕：<https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/20#issuecomment-5435694951>。
-- 精确删除旧分支 `automation/dsh-compat/0.1.1-rc.2`；GitHub ref 回读为 deleted。旧 PR 的历史仍可查看。
+- 精确删除旧分支 `automation/dsh-compat/0.1.1-rc.2`；删除动作后 GitHub ref 回读为 deleted，旧 PR 的历史仍可查看。随后 publisher 为新的纯文字候选 PR 重新创建了同名分支，这是当前 ref 重新存在的原因，不是旧 PR 复活。
 - 当前新 [PR #21](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/21) 为 OPEN、非 draft、`mergeStateStatus=CLEAN`，head 为 `65fcac72114b8984c22c1ccf4926b61f9ebf2bd7`。它尚未合并，保留一次用户审核门；默认没有自动合并。
 
 ## 视觉边界
@@ -89,4 +89,3 @@ Guardian 自身测试为 80/80 PASS；同一纯文字 contract 的真实模型 s
 - Guardian text-only smoke 实现：`28898380f3f6a03dab99027ef86850e999f3627b`。
 - 本记录所在分支：`codex/design-foundation`。
 - 本文件不包含 API key、私有路径、原始 transcript 或未脱敏日志。
-
