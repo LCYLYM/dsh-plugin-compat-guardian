@@ -61,7 +61,7 @@ gh api --method PUT repos/{owner}/{repo}/actions/permissions/workflow \
 
 ```mermaid
 flowchart LR
-  A[NPM latest / 安装图变化] --> B[无 Key 机械验证]
+  A[官方 GitHub Release / NPM 安装图变化] --> B[无 Key 机械验证]
   B --> C{插件是否通过?}
   C -- 是 --> D[更新 verified lock]
   D --> E[PR / auto-merge / direct-push]
@@ -125,7 +125,8 @@ CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSe
 
 ## 默认与可配置项
 
-- 候选 DSH：跟踪 NPM `latest`，即使根版本号未变但内部安装图变了也会复测。
+- 候选 DSH：默认跟踪官方 `deepseek-ai/deepseek-harness` 的 `dsh-v*` GitHub Release，包含 prerelease；随后要求同版本 NPM 包存在并用它做真实安装。GitHub Release 已发布但 NPM 尚未发布时进入 `WAITING_FOR_NPM_ARTIFACT`，不调用模型、不建 PR。
+- 兼容候选按 Release tag + commit SHA + NPM integrity 锁定；同版本重新打 tag 也会被识别为新快照。需要兼容旧行为时可将 `watch.source` 改为 `npm`。
 - repair DSH：默认固定 `0.1.1-rc.2`，可改；每次 campaign 开始后锁定。
 - provider/model：默认 `deepseek-official/deepseek-v4-flash-vision-exp`。已实测支持自定义 DeepSeek `base_url`、Key 值、Key 环境变量引用和 model ID；Guardian 会直接 patch DSH 原生 `llm-deepseek` adapter。
 - GitHub Secret：默认只需建立 `DEEPSEEK_API_KEY`。`.dsh-compat.yml` 的 `api_key_env` 是 DSH 进程内的凭据引用，不是 GitHub Secret 的名字；仓库用别的 Secret 名时，只改薄 workflow 中 `deepseek_api_key` 的 Secret 映射。

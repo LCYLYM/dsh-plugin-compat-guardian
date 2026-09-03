@@ -6,7 +6,7 @@
 
 ## 1. 一句话定义
 
-Guardian 是安装进 DSH 插件仓库的 GitHub Actions 维修机器人：持续追踪 `@deepseek-ai/dsh` 的 NPM `latest`，在隔离环境里验证真实插件；不兼容时调用 DSH 自己在有界预算内修复，再由独立 verifier 复测，最后生成报告和可合并 PR，也可由仓库显式开启自动合并或直接推送默认分支。
+Guardian 是安装进 DSH 插件仓库的 GitHub Actions 维修机器人：持续追踪官方 `deepseek-ai/deepseek-harness` 的 GitHub Release，在隔离环境里用对应的 `@deepseek-ai/dsh` NPM 制品验证真实插件；不兼容时调用 DSH 自己在有界预算内修复，再由独立 verifier 复测，最后生成报告和可合并 PR，也可由仓库显式开启自动合并或直接推送默认分支。
 
 它解决的不是“发新版提醒”，而是下面这个完整闭环：
 
@@ -28,7 +28,7 @@ Guardian 是安装进 DSH 插件仓库的 GitHub Actions 维修机器人：持�
 - **upstream**：fork 最初来源的原作者仓库。它可能继续按自己的节奏演进，也可能完全不接受你的补丁。
 - **fork**：从别人的仓库复制后由自己维护的版本。即使改了很多补丁，它仍可以独立成为当前仓库。
 - **基线（baseline）**：上一次已知能工作的组合，不只是一个 DSH 版本，而是插件 commit、DSH 制品、Node/包管理器/系统、配置与 smoke contract 的组合。
-- **候选 DSH（candidate）**：本轮 `latest` 解析出的新版，用来证明插件是否兼容；它是不可信的被测程序。
+- **候选 DSH（candidate）**：本轮官方 GitHub Release 解析出的新版，并绑定 release tag、commit SHA 与对应 NPM integrity；它是不可信的被测程序。
 - **维修 DSH（repair runner）**：已知稳定、允许使用模型并修改隔离 worktree 的 DSH；默认版本可配置，但一轮开始后不得漂移。
 - **campaign**：当前仓库对一个目标根 DSH 版本的整次维护活动。Actions rerun、修复轮次和定时唤醒都共享同一预算与状态。
 
@@ -41,7 +41,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | ID | 决定 |
 | --- | --- |
 | D1 | V1 是仓库内 GitHub Actions 维修机器人，不建设中央服务、数据库或 GitHub App。 |
-| D2 | 只追踪 NPM `latest` 并最终收敛到最新；不为每个中间发布排队。 |
+| D2 | 只追踪官方 DSH GitHub Release 并最终收敛到最新；不为每个中间发布排队。对应 NPM 包就绪后才进入安装验证。 |
 | D3 | candidate 与 repair runner 是两个隔离角色；candidate 永远无 Git 写权限，默认也无模型凭据。只有已审核 smoke contract 明确要求真实模型回合时，candidate 才在单独固定 smoke step 临时获得仓库配置的模型 Secret。 |
 | D4 | repair DSH 默认 `0.1.1-rc.2`（项目立项时 NPM `latest`），允许配置为其他固定版、`latest` 或 `target`；每轮开始时解析成精确制品并冻结。 |
 | D5 | repair provider/model 默认 `deepseek-official/deepseek-v4-flash-vision-exp`；该原生 adapter 的 base URL、key 环境引用和 model id 可覆盖。其他 provider 需已在 DSH profile 注册，失败不得静默换 route。 |
@@ -68,7 +68,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
 | D27 | 模型 Secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign；D37 的已审核 candidate 固定 smoke 可在兼容结论前获得一次，repair DSH 则只在无 key 检查确认失败后获得。PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 都不得获得它。 |
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
-| D29 | 默认每 6 小时检查一次 NPM `latest` 与实际安装图，另保留手工立即检查，以及默认分支 Guardian 配置、lock 或已审核 smoke contract 变更触发；普通插件源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时 latest。 |
+| D29 | 默认每 6 小时检查一次官方 GitHub Release 与对应 NPM 制品，另保留手工立即检查，以及默认分支 Guardian 配置、lock 或已审核 smoke contract 变更触发；普通插件源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时最新 Release。 |
 | D30 | 首次 onboarding 没有历史 `verified` 时，先用本轮解析并冻结的 repair DSH（默认 `0.1.1-rc.2`）建立初始基线；PASS 后才测试当前 latest。若它本身失败则 `ONBOARDING_BLOCKED` 且不调模型，不增加 baseline 配置项。 |
 | D31 | campaign 锁定启动时的默认分支 commit。发布前若分支已前进，旧 attempt 进入 `STALE_SOURCE` 且不得发布；下一次只先对新 commit 做无模型复测。此前未调用模型则保留唯一维修机会，已经调用则必须 reset 才能再次调模型。 |
 | D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
@@ -99,7 +99,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 ```mermaid
 flowchart LR
     W[仓库薄 workflow] --> O[Guardian orchestrator]
-    O --> R[NPM resolver]
+    O --> R[GitHub Release resolver + NPM artifact]
     O --> V[独立 verifier]
     O --> A[repair DSH]
     O --> P[publisher]
@@ -121,13 +121,21 @@ flowchart LR
 
 ## 5. 目标解析与 latest 收敛
 
-监控对象不是一个长期运行的 `dsh web` 进程，而是 `npx @deepseek-ai/dsh web` 会解析到的 NPM 制品。
+监控对象不是一个长期运行的 `dsh web` 进程，而是官方 GitHub Release 对应、最终由 `npx @deepseek-ai/dsh web` 安装运行的 NPM 制品。
 
-每次唤醒读取 registry packument，得到：
+每次唤醒先读取官方 GitHub Release，得到：
 
 ```text
-registry + package + dist-tag + root version + root integrity
+GitHub repository + release tag + release commit + publishedAt
 ```
+
+再读取对应的 registry packument，得到：
+
+```text
+registry + package + exact version + root integrity
+```
+
+Release 已出现但 NPM exact version 尚未发布时，报告 `WAITING_FOR_NPM_ARTIFACT`，不启动模型维修和发布流程。
 
 ### 为什么版本号没变也可能需要复测
 
@@ -251,7 +259,7 @@ DSH 默认从 `package.json`/manifest、源码入口、README、已有 test/buil
 
 onboarding PR 合并后，lock 里还没有历史 `verified`。这时不增加一个新的 baseline 配置项，而是先把本轮已解析并冻结的 repair DSH 当作启动参照（默认 `0.1.1-rc.2`），在当前插件树上执行同一套完整 gate：
 
-1. repair DSH 参照通过，才由 publisher 把它写成第一份精确 `verified`，随后继续测试当时 NPM `latest`；若两者是同一精确安装快照，不重复执行第二遍。
+1. repair DSH 参照通过，才由 publisher 把它写成第一份精确 `verified`，随后继续测试当时官方 GitHub Release 对应的 NPM 制品；若两者是同一精确安装快照，不重复执行第二遍。
 2. repair DSH 参照失败，状态为 `ONBOARDING_BLOCKED`，只报告失败证据，不调用模型。因为此时没有“旧版通过、新版失败”的差分，不能把仓库原本就坏的问题冒充 DSH 更新兼容问题。
 3. 用户若把 repair DSH 配成 `latest` 或 `target`，仍先解析为精确 version/integrity/install graph 后再作为这一次启动参照；后续历史基线读取 lock 中已验证的精确快照，不重新漂移解析。
 
@@ -452,7 +460,7 @@ cost = cache_hit_input * hit_rate
 - 同一 SHA 在 workflow rerun 或 schedule 中只消费一次；静态 `Y` 不会反复充值。
 - 每个 attempt 在开始时记录 `basePluginCommit`。publisher 执行任何 PR 更新、auto-merge 或 direct-push 前重新读取默认分支 SHA；不一致就写入 `STALE_SOURCE`，不得发布旧 diff。
 - 下一次定时或手工检查对新 SHA 先执行无模型 gate。旧 attempt 尚未调用模型时，campaign 仍保留那一次自动维修机会；已经调用过时，源码变化本身不能再送一次模型预算，失败后继续等待 reset。
-- 维修 PR 使用包含目标版本的确定分支/标题。PR 尚未合并而 NPM latest 变化时，publisher 给旧 PR 写入 `SUPERSEDED` 原因并关闭；PR、评论、checks 和 commits 继续作为历史证据。新目标始终从当时默认分支重新开始，不 force-push、不改写旧 PR，也不把两个目标版本的证据放在同一个 PR。
+- 维修 PR 使用包含目标版本的确定分支/标题。PR 尚未合并而官方 GitHub Release 变化时，publisher 给旧 PR 写入 `SUPERSEDED` 原因并关闭；PR、评论、checks 和 commits 继续作为历史证据。新目标始终从当时默认分支重新开始，不 force-push、不改写旧 PR，也不把两个目标版本的证据放在同一个 PR。
 - reset 开启新 budget epoch，旧 epoch 的实际消耗保留在报告和累计总额里，不伪装成没花过。
 - 再次 reset 需要新的 `N -> Y` 边沿；用户也可以只提高配置上限，此时保留原 consumed 并获得新增余量。
 - repair agent 不能编辑 lock；用户控制 `control`，publisher 控制运行态和 `verified`。
@@ -483,7 +491,7 @@ cost = cache_hit_input * hit_rate
 
 - reusable workflow 的 secrets 必须显式传入；默认 job 使用 read-only `GITHUB_TOKEN`。
 - publisher 默认使用仓库 `GITHUB_TOKEN`，调用仓库需在 Actions 设置中允许创建 PR。若 GitHub 对 bot PR 的 checks 要求人点击批准，则状态保持 `WAITING_FOR_GITHUB_APPROVAL`，不绕过。需要无人值守 auto-merge 时可选细粒度 `DSH_GUARDIAN_PUBLISH_TOKEN`；它只进入 publisher job，repair/candidate/verifier 都不可见。
-- 外部 Guardian reusable workflow 必须锁完整 commit SHA，不能引用可移动的 `main`/`v1`。该 SHA 只固定 Guardian 引擎，candidate DSH 仍在运行时解析 NPM latest；V1 不增加 Guardian 自更新检查或自动更新 PR。
+- 外部 Guardian reusable workflow 必须锁完整 commit SHA，不能引用可移动的 `main`/`v1`。该 SHA 只固定 Guardian 引擎；candidate DSH 在运行时解析官方 GitHub Release，再冻结对应 NPM 制品。GitHub Release 尚未有对应 NPM 包时进入 `WAITING_FOR_NPM_ARTIFACT`，不调用模型、不创建 PR。
 - candidate/verifier job 与 publisher job 分权；不让不可信 artifact 直接变成有权限脚本。
 - 使用 concurrency、job timeout 和确定分支；GitHub 自带的 `GITHUB_TOKEN` 防递归规则只是第二道防线。
 - scheduled workflow 只在默认分支定义生效，可能延迟；公开仓库长期无活动还可能被自动禁用，所以 cron 只是唤醒器。

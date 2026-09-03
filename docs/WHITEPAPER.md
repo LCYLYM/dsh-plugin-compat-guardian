@@ -8,7 +8,7 @@
 
 DeepSeek Harness（DSH）仍在快速发布。一个插件今天能装、能启动、能处理请求，不代表下一次 `npx @deepseek-ai/dsh web` 拉到新制品后仍然兼容。插件作者通常没有精力持续盯版本、重搭环境、复现问题、修代码并发布说明。
 
-Guardian 是安装进插件仓库的 GitHub Actions 维修机器人。它定时查看 NPM `latest`，把候选 DSH 和插件放进一次性隔离目录，运行真实测试、打包、安装、配置检查、`dsh web` 启动和插件专属断言。若全部通过，它只更新一条精确的已验证记录；若确认是 DSH 变化造成的不兼容，它才调用一套固定的 repair DSH，在预算内修复，并由不受 repair 控制的 verifier 复验，最终交付 PR。仓库也可显式开启自动合并或直接推送，但默认都关闭。
+Guardian 是安装进插件仓库的 GitHub Actions 维修机器人。它定时查看官方 DSH GitHub Release，再等待对应 NPM 制品就绪，把候选 DSH 和插件放进一次性隔离目录，运行真实测试、打包、安装、配置检查、`dsh web` 启动和插件专属断言。若全部通过，它只更新一条精确的已验证记录；若确认是 DSH 变化造成的不兼容，它才调用一套固定的 repair DSH，在预算内修复，并由不受 repair 控制的 verifier 复验，最终交付 PR。仓库也可显式开启自动合并或直接推送，但默认都关闭。
 
 产品只解决一件事：**让一个 DSH 插件仓库持续兼容当前最新 DSH**。它不是通用依赖更新器、通用 CI 修复器，也不建设中央托管平台。
 
@@ -63,10 +63,10 @@ npx dsh-plugin-compat-guardian onboard
 ## 4. 系统边界
 
 ```text
-NPM registry
+Official GitHub Release
     |
     v
-detector/resolver -----> frozen campaign snapshot
+detector/resolver + matching NPM artifact -----> frozen campaign snapshot
                               |
                     +---------+---------+
                     |                   |
@@ -105,6 +105,7 @@ detector/resolver -----> frozen campaign snapshot
 根版本号不够。Guardian 的候选身份至少包含：
 
 - `@deepseek-ai/dsh` 精确版本；
+- 官方 Release tag 与 commit SHA；
 - NPM tarball integrity；
 - 一次全新安装得到的 lockfile/依赖图 digest；
 - 精确 Node 版本、包管理器版本和 runner OS；
@@ -120,6 +121,7 @@ detector/resolver -----> frozen campaign snapshot
 | --- | --- | --- |
 | `NOOP` | 当前安装快照已验证，什么都不做 | 等下次唤醒 |
 | `DETECTING` | 正在解析 latest 和真实依赖图 | 生成冻结 snapshot |
+| `WAITING_FOR_NPM_ARTIFACT` | 官方 GitHub Release 已发布，但同版本 NPM 制品尚未就绪 | 不调用模型、不建 PR，下一次唤醒继续检查 |
 | `VERIFYING` | 正在跑无模型兼容 gate | PASS 或分类失败 |
 | `WAITING_FOR_PRICE` | 已证明确需维修，默认等待低价窗口 | 到窗后 repair；latest 变化则 supersede |
 | `REPAIRING` | 固定 repair DSH 正在有界修改 | 进入独立复验 |

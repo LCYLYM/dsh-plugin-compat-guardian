@@ -27,6 +27,8 @@ test('plugin workspace resolves a monorepo package without changing the reposito
 });
 
 const INVALID_CONFIGS = [
+  ['invalid watch source', { watch: { source: 'git-tags' } }],
+  ['invalid GitHub repository', { watch: { github_repository: 'deepseek-ai' } }],
   ['empty provider', { repair: { provider: '' } }],
   ['numeric model', { repair: { model: 123 } }],
   ['relative base URL', { credentials: { base_url: '/v1' } }],
@@ -37,6 +39,18 @@ const INVALID_CONFIGS = [
   ['invalid search URL', { credentials: { search_base_url: 'not-a-url' } }],
   ['invalid repair start policy', { repair: { start_policy: 'sometimes' } }],
 ];
+
+test('default watch source is the official GitHub Release with prereleases enabled', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'guardian-default-watch-'));
+  try {
+    const { config } = await loadConfig(root);
+    assert.equal(config.watch.source, 'github-release');
+    assert.equal(config.watch.github_repository, 'deepseek-ai/deepseek-harness');
+    assert.equal(config.watch.github_include_prereleases, true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 for (const [name, override] of INVALID_CONFIGS) {
   test(`config rejects ${name} before DSH starts`, async () => {

@@ -19,7 +19,7 @@
 - [x] 建立独立设计/实现 worktree 和公开 fixture。
 - [x] 锁定默认 repair DSH 为 `0.1.1-rc.2`，确认 NPM root integrity 和 CLI 契约。
 - [x] 建立 Node ESM CLI、配置解析、runtime/package-manager resolver。
-- [x] 解析 NPM dist-tag、精确 manifest、integrity，并对实际 pnpm lock 计算 graph digest。
+- [x] 解析官方 GitHub Release 的 tag/commit，再验证对应 NPM manifest、integrity，并对实际 pnpm lock 计算 graph digest。
 - [x] 对目标仓库执行原测试和 `npm pack`，记录 tarball hash。
 - [x] 在全新 runner 目录安装精确 candidate DSH，在全新 `DSH_HOME` add 插件 tarball。
 - [x] dump profile、启动真实 `dsh web`、执行 fixture `/health` 断言。
@@ -35,7 +35,7 @@ M0 作为无模型基础切片保持可独立运行；repair/model、三种交�
 
 | ID | 里程碑 | 实现项 | 必须看到的证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| R1 | M0/M1 | registry resolver、latest 收敛、root integrity、pnpm graph digest、supersede/dedupe | 两份同版本不同 graph fixture；latest 跳变 | pass |
+| R1 | M0/M1 | GitHub Release resolver、匹配 NPM artifact、root integrity、pnpm graph digest、supersede/dedupe | prerelease 跳变、NPM 延迟发布等待、tag/commit 锁定 | pass |
 | R2 | M0/M2 | candidate/repair 两套临时安装根和 DSH_HOME；动态 spec 开局冻结 | 目录、version、integrity、graph 全不同且可回读 | pass |
 | R3 | M0/M2 | baseline 与 candidate 执行同一个 gate runner | 只替换 DSH snapshot 的差分报告 | pass |
 | R4 | M0/M1 | PASS 报告、verified lock、无代码 PASS 提交 | 失败不写 verified；下一轮 NOOP | pass |
@@ -93,7 +93,7 @@ M0 作为无模型基础切片保持可独立运行；repair/model、三种交�
 bin/dsh-plugin-compat-guardian.js   CLI 入口
 lib/config.js                       默认值、YAML 读取和窄校验
 lib/runtime.js                      Node/包管理器解析
-lib/registry.js                     NPM exact snapshot
+lib/registry.js                     GitHub Release + NPM exact snapshot
 lib/process.js                      带超时、截断和脱敏的子进程
 lib/verifier.js                     pack/add/dump/web/smoke/remove 编排
 lib/report.js                       JSON/Markdown/Summary 与 verified lock

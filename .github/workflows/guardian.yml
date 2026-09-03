@@ -17,7 +17,7 @@ on:
         default: ubuntu-24.04
         type: string
       target_dsh:
-        description: Optional exact DSH version for a manual campaign; empty means config latest
+        description: Optional exact DSH version for a manual campaign; empty means the configured GitHub Release selector
         required: false
         default: ''
         type: string
