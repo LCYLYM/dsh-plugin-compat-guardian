@@ -43,6 +43,9 @@ repair:
     - .dsh-compat.yml
     - .dsh-compat.lock.json
     - compatibility/**
+    - .pnpm-store/**
+    - .npm/**
+    - .yarn/cache/**
 
   # 这是 DSH 的独立 DeepSeek 搜索 provider，不是视觉模型自带的能力。
   # 默认同样使用视觉模型；若仓库覆盖，报告必须记录实际值，且不得静默回退。
