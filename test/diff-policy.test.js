@@ -6,6 +6,19 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { classifyManifestChanges, classifyRepairDiff, diffStatistics } from '../lib/diff-policy.js';
+import { assertRepairPaths } from '../lib/repair.js';
+import { DEFAULT_CONFIG } from '../lib/config.js';
+
+test('repair path guard rejects generated package-manager caches', () => {
+  assert.throws(
+    () => assertRepairPaths(['.pnpm-store/v10/files/aa/cache-entry'], DEFAULT_CONFIG.repair.protected_paths),
+    error => error?.code === 'PROTECTED_PATH_CHANGED',
+  );
+  assert.throws(
+    () => assertRepairPaths(['.yarn/cache/pkg-npm-1.0.0.zip'], DEFAULT_CONFIG.repair.protected_paths),
+    error => error?.code === 'PROTECTED_PATH_CHANGED',
+  );
+});
 
 test('ordinary DSH range changes can use configured delivery', () => {
   assert.deepEqual(classifyManifestChanges(
