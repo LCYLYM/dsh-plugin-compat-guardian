@@ -1,16 +1,18 @@
 # State
 
-日期：2026-08-23
+日期：2026-09-03
 
 项目阶段：V1 实现完成，主链路已在公开仓库真实验证。默认交付人工审核 PR；`auto-merge` 和 `direct-push` 需仓库显式开启。
 
+2026-09-03 已将候选发现器改为默认追踪官方 `deepseek-ai/deepseek-harness` GitHub Release（含 prerelease），再校验对应 NPM 制品；Release 与 NPM 发布存在时间差时进入 `WAITING_FOR_NPM_ARTIFACT`，不调用模型、不创建 PR。Guardian 本地测试 86/86 通过，真实 `0.1.2-rc.1` 候选已成功解析并隔离安装；公开四个 fork 尚未切换到本次 Guardian commit。
+
 2026-08-22 专项审计修复已 PASS：模型配置/外部错误持久化、未合并维修 PR 去重、自定义 DSH route、严格配置验证和失败 verified 不前移均已落地。
 
-2026-08-23 四个社区 fork 真实 AI 维修已 PASS：rc.2 repair DSH 实际调用、一文件兼容 diff、独立 rc.2 verifier、自动 PR、合并后无模型收敛均有公开证据。测试 Key 已删除。2026-08-24 发现首次停机只关闭 Guardian，未关闭 fork 从上游继承的其他 Actions；现已枚举并停用四仓库全部 workflow，回读 active workflow、活跃/排队 run 与 DeepSeek Key 数量均为 0。
+2026-08-23 四个社区 fork 真实 AI 维修已 PASS：rc.2 repair DSH 实际调用、一文件兼容 diff、独立 rc.2 verifier、自动 PR、合并后无模型收敛均有公开证据。测试 Key 已删除。2026-08-24 发现首次停机只关闭 Guardian，未关闭 fork 从上游继承的其他 Actions；现已枚举并停用四仓库全部 workflow，并经用户明确授权关闭四仓库的 Actions 总开关。逐仓回读均为 `enabled=false`；active workflow、活跃/排队 run 与 DeepSeek Key 数量均为 0。
 
 ## 已实现
 
-- 每 6 小时、手工或控制文件变化时解析 NPM `latest`，冻结 DSH 精确版本、root integrity 和实际安装图。
+- 每 6 小时、手工或控制文件变化时解析官方 GitHub Release 及对应 NPM 制品，冻结 Release tag/commit、精确版本、root integrity 和实际安装图。
 - 在隔离目录和独立 `DSH_HOME` 中执行仓库测试、pack、插件安装、config dump、真实 `dsh web`、专属 smoke 和卸载。
 - 默认 candidate-only 的真实模型/视觉 smoke；固定 fixture 按字节冻结，只判定附件进入请求、provider 返回非空结果等机械事实。
 - 机械验证失败后才让固定 `@deepseek-ai/dsh@0.1.1-rc.2` 使用默认 `deepseek-official/deepseek-v4-flash-vision-exp` 维修；repair 没有 Git 写凭据，必须经独立 verifier 复测。
@@ -49,5 +51,5 @@
 ## 不可越过的边界
 
 - token/CNY 上限基于 DSH 已报告 usage，可在下一次请求前阻断；它不是 DeepSeek 账户账单级实时硬限。
-- NPM 包尚未发布；当前从上述完整 Git commit SHA 安装，避免可移动 ref。
+- GitHub Release 是更新信号，NPM 是实际安装制品；两者不同步时必须保持 `WAITING_FOR_NPM_ARTIFACT`，不能用源码压缩包冒充已发布运行包。
 - V1 仅安装进单个插件仓库，不做中央多仓库托管，不自动更改或通知 upstream。

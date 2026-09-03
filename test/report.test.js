@@ -52,6 +52,22 @@ test('blocked report explains the next action without hiding the error code', ()
   assert.match(markdown, /MODEL_SMOKE_RPC/);
 });
 
+test('pending GitHub release report explains that model repair is not started', () => {
+  const markdown = renderMarkdown({
+    status: 'WAITING_FOR_NPM_ARTIFACT',
+    candidate: {
+      package: '@deepseek-ai/dsh',
+      version: '0.1.2-rc.1',
+      release: { tag: 'dsh-v0.1.2-rc.1', commit: 'a'.repeat(40), url: 'https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1' },
+    },
+    steps: [],
+    error: { code: 'NPM_ARTIFACT_PENDING', message: '等待 NPM 制品' },
+  });
+  assert.match(markdown, /等待 NPM 制品发布/);
+  assert.match(markdown, /不会调用模型或创建 PR/);
+  assert.match(markdown, /dsh-v0.1.2-rc.1/);
+});
+
 test('configuration blocker tells the user what to fix and promises no scheduled model loop', () => {
   const markdown = renderMarkdown({
     status: 'BLOCKED_CONFIG',

@@ -78,3 +78,20 @@ test('reviewed visual fixture is frozen by bytes and cannot escape the repositor
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('text model smoke has no visual fixture and keeps the same event contract', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'guardian-text-fixture-'));
+  try {
+    await writeFile(join(root, 'package.json'), '{"name":"text-model-smoke-fixture"}\n');
+    const contract = {
+      fixture_mode: 'none',
+      model_smoke: {
+        input_mode: 'text',
+        required_event_types: ['user/message', 'tool/call', 'tool/result', 'assistant/message', 'turn/end'],
+      },
+    };
+    assert.deepEqual(await resolveModelFixtures(root, contract), []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

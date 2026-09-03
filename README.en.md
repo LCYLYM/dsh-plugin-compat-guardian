@@ -43,7 +43,7 @@ The second command lets Actions create maintenance PRs while keeping default wor
 | Purpose | Follow DSH `latest` over time | Prove one real AI-repair loop |
 | Trigger | Six-hour schedule plus manual runs | `workflow_dispatch` only |
 | Secret | Set it in the plugin repository | Forks do not inherit Secrets; set it separately in the fork |
-| Finish | Keep the workflow active | Disable every workflow in the fork and delete the test Secret |
+| Finish | Keep the workflow active | Disable Actions for the entire fork and delete the test Secret |
 
 If the plugin already passes on the new DSH, Guardian correctly performs a no-model verification. That proves it avoids unnecessary spending; it does not prove AI repair. A repair exercise must show non-zero model usage, an actual worktree diff, a non-zero independent-verifier duration, a final PASS, and a reviewable PR.
 
@@ -53,7 +53,7 @@ The step-by-step fork procedure, controlled reviewed-host-boundary example, acce
 
 ```mermaid
 flowchart LR
-  A[NPM latest or install-graph change] --> B[No-key mechanical verifier]
+  A[Official GitHub Release or install-graph change] --> B[No-key mechanical verifier]
   B --> C{Plugin passes?}
   C -- Yes --> D[Publish verified lock]
   D --> E[PR / auto-merge / direct-push]
@@ -85,7 +85,8 @@ Deterministic checks run immediately. Only code repair may wait for the configur
 
 ## Configurable defaults
 
-- Candidate DSH follows NPM `latest`, including dependency-graph changes under an unchanged root version.
+- Candidate DSH follows official `dsh-v*` releases from `deepseek-ai/deepseek-harness` (including prereleases by default), then requires the matching NPM package as the reproducible install artifact. A GitHub release without its NPM package becomes `WAITING_FOR_NPM_ARTIFACT` with no model call or PR. Set `watch.source: npm` to retain registry-only discovery.
+- Candidate identity is pinned by release tag, commit SHA, and NPM integrity; retagged releases are treated as a new snapshot.
 - Repair DSH is pinned to `0.1.1-rc.2` by default.
 - The default route is `deepseek-official/deepseek-v4-flash-vision-exp`; provider, base URL, Secret environment name and model ID are configurable.
 - Repair DSH may use official DeepSeek search when useful; search is optional and has no separate Guardian limit.

@@ -2,7 +2,7 @@
 
 `pass` 表示实现已有公开真实运行或足以复现该机械边界的确定性证据；`partial` 表示代码已实现，但缺少外部凭据/真实上游事件或全组合现场验证。V1 不留“尚未实现”的 `open` 项。
 
-- R1 [pass] 追踪 `@deepseek-ai/dsh` 当前 `latest` dist-tag，解析精确 version/root integrity 与实际安装依赖图 digest，并最终收敛到最新候选；surface: CI 运行记录与版本状态；evidence: 真实 registry/全新安装探测、过时任务 `SUPERSEDED` 和去重测试。
+- R1 [pass] 追踪官方 `deepseek-ai/deepseek-harness` 的最新 `dsh-v*` GitHub Release（默认包含 prerelease），解析 tag/commit，并要求对应 `@deepseek-ai/dsh` NPM 制品后冻结精确 version/root integrity 与实际安装依赖图 digest；NPM 延迟发布进入 `WAITING_FOR_NPM_ARTIFACT`，最终收敛到最新候选；surface: CI 运行记录与版本状态；evidence: 真实 GitHub/NPM 探测、Release 跳变、延迟发布等待、过时任务 `SUPERSEDED` 和去重测试。
 - R2 [pass] repair runner 的仓库默认值为项目立项时 NPM latest DSH `0.1.1-rc.2`，允许显式覆盖，并把候选新版安装到隔离目录；`latest`/`target` 等动态配置也必须在 campaign 开始解析成不变的 version/integrity/依赖图；surface: 独立 DSH_HOME、工作目录和进程；evidence: 两个角色与制品隔离的真实运行记录。
 - R3 [pass] 使用上一次已知兼容 DSH 作为参照组，再在候选 DSH 中安装真实打包的插件并执行同一套 gate；surface: build/test/pack/profile/CLI/Web/API/插件行为；evidence: 只变更 DSH 这一基线变量的差分结果。
 - R4 [pass] 兼容通过时生成去敏报告并更新 `.dsh-compat.lock.json#verified`；无代码改动也要提交“已验证该 DSH 版本”的窄记录；surface: lock/commit/PR/Actions；evidence: diff、commit、CI、制品 integrity 与报告回读。
@@ -28,7 +28,7 @@
 - R24 [pass] 不设置 changed-files/changed-lines 阻断阈值；报告必须记录 diff 文件数和增删行数，防失控由既有 token/CNY/墙钟/轮次预算、每版本一次自动维修、保护路径和独立 verifier 保证；surface: repair report/budget gates；evidence: 大型可重复生成 diff 不被误拦、超预算维修仍被既有硬门停止。
 - R25 [pass] 模型 secret 只能在绑定可信默认分支 SHA 的 schedule、workflow_dispatch 或默认分支 push campaign 中使用；R35 的已审核 candidate 固定 smoke 可在兼容结论前临时注入一次，repair job 则必须等无 key 兼容检查确认失败后才能注入。普通/fork PR、检出 PR 代码的 pull_request_target 和任意 ref 必须拿不到该 secret，publisher Git 写 token 继续隔离；surface: workflow permissions/jobs/event guard；evidence: 三个允许触发、candidate/repair 两个注入时机和各类拒绝触发的 secret 可见性测试。
 - R26 [pass] Guardian 只响应 DSH 新版本或同根版本安装图变化造成的插件兼容问题；不得把无关依赖升级、普通 CI 故障、代码质量整理或日常仓库维护纳入自动维修 campaign；surface: detector/failure classifier/report；evidence: DSH 差分故障进入维修、无关故障只报告且不调模型。
-- R27 [pass] 默认以 `17 */6 * * *` 每 6 小时探测 NPM latest/安装图，支持 workflow_dispatch 立即检查，并在默认分支 Guardian 配置、lock 或已审核 smoke contract 变化时触发；普通插件源码 push 不触发，cron 延迟或跳过中间版本后仍收敛到唤醒时 latest；surface: thin workflow/resolver/event dedupe；evidence: 四类允许触发、源码 push 静默、延迟与 latest 跳变测试。
+- R27 [pass] 默认以 `17 */6 * * *` 每 6 小时探测官方 GitHub Release、对应 NPM 制品和安装图，支持 workflow_dispatch 立即检查，并在默认分支 Guardian 配置、lock 或已审核 smoke contract 变化时触发；普通插件源码 push 不触发，cron 延迟或跳过中间版本后仍收敛到唤醒时最新 Release；surface: thin workflow/resolver/event dedupe；evidence: 四类允许触发、源码 push 静默、Release 跳变与 NPM 延迟等待测试。
 - R28 [pass] onboarding 无历史 verified 时，先用本轮锁定的 repair DSH（默认 `0.1.1-rc.2`）在当前插件树执行完整 gate；PASS 才写第一份精确 verified 并测试当前 latest，失败则 `ONBOARDING_BLOCKED`、不调模型且不声称是 DSH 更新问题；surface: onboarding bootstrap/lock/report；evidence: 初始 PASS、初始 FAIL、动态 repair 解析和 repair/latest 同快照去重测试。
 - R29 [pass] 每个 attempt 锁定默认分支 base commit；publish 前分支 SHA 变化必须转为 `STALE_SOURCE` 并拒绝旧 PR 更新、auto-merge/direct-push，随后只先对新 SHA 做无模型复测。未调用模型时保留原自动维修机会，已调用时源码变化不得重置同版本预算或维修次数；surface: campaign state/publisher guard/lock；evidence: 等待、维修、验证和发布四个阶段的竞态测试。
 - R30 [partial] 每个目标 DSH 版本使用独立维修 PR；旧 PR 未合并时 latest 变化，必须标记 `SUPERSEDED` 后自动关闭并保留历史，新目标从当前默认分支重新验证并在需要时新开 PR，禁止 force-push 或改写旧 PR 混合两个目标证据；surface: deterministic branch/PR publisher；evidence: PR 等待期间 latest 跳变的关闭、留痕和新 PR 回读。

@@ -31,7 +31,7 @@ test('a blocked registry probe does not advance verified lock', async () => {
     await writeFile(join(path, 'package.json'), `${JSON.stringify({ name: 'fixture', version: '1.0.0' }, null, 2)}\n`);
     await writeFile(join(path, '.dsh-compat.yml'), stringify({
       schema: 1,
-      watch: { registry, package: '@deepseek-ai/dsh', channel: 'latest' },
+      watch: { source: 'npm', registry, package: '@deepseek-ai/dsh', channel: 'latest' },
       gates: { repository: [] },
     }));
     await writeFile(join(path, 'dsh-smoke.yml'), stringify({
