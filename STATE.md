@@ -4,7 +4,9 @@
 
 项目阶段：V1 实现完成，主链路已在公开仓库真实验证。默认交付人工审核 PR；`auto-merge` 和 `direct-push` 需仓库显式开启。
 
-2026-09-03 已将候选发现器改为默认追踪官方 `deepseek-ai/deepseek-harness` GitHub Release（含 prerelease），再校验对应 NPM 制品；Release 与 NPM 发布存在时间差时进入 `WAITING_FOR_NPM_ARTIFACT`，不调用模型、不创建 PR。Guardian 本地测试 86/86 通过，真实 `0.1.2-rc.1` 候选已成功解析并隔离安装；公开四个 fork 尚未切换到本次 Guardian commit。
+2026-09-03 已将候选发现器改为默认追踪官方 `deepseek-ai/deepseek-harness` GitHub Release（含 prerelease），再校验对应 NPM 制品；Release 与 NPM 发布存在时间差时进入 `WAITING_FOR_NPM_ARTIFACT`，不调用模型、不创建 PR。Guardian 本地测试 87/87 通过，真实 `0.1.2-rc.1` 候选已成功解析并隔离安装；四个公开测试 fork 已切换到 Guardian `adcc499e42ef1697f52265e788ae698b477b7c91` 并完成一次真实 Actions 验证，随后已关闭 Guardian workflow。
+
+本轮真实结果：`dsh-web-ui` 产生并打开 PR #7（AI 将 `maxHost` 从 `0.1.1-rc.2` 调整到 `0.1.2-rc.1`，独立 verifier 通过，总用时约 456.6 秒）；`dsh-whale-report` 的模型维修通过 verifier 但生成 673 个 `.pnpm-store` 缓存文件，发布阶段拒绝应用 16MB 补丁；`dsh-plugin-better-sidebar-plugin-office` 的维修在收集 diff 时超时并冻结；`dsh-ankh-guard` 的维修调用约 12.8 分钟后以 DSH 命令失败并冻结。为避免缓存类误修进入发布器，默认保护 `.pnpm-store/**`、`.npm/**`、`.yarn/cache/**`，修复已合并至 Guardian main。
 
 2026-08-22 专项审计修复已 PASS：模型配置/外部错误持久化、未合并维修 PR 去重、自定义 DSH route、严格配置验证和失败 verified 不前移均已落地。
 
