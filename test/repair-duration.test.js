@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { CommandError } from '../lib/errors.js';
-import { classifyRepairFailure, independentVerifierEvidence, sanitizedDiagnostic } from '../lib/repair.js';
+import {
+  classifyRepairFailure,
+  independentVerifierEvidence,
+  sanitizedDiagnostic,
+  successfulModelAttempts,
+  verifierRefinementDecision,
+} from '../lib/repair.js';
 
 test('repair evidence reports the independent verifier duration', () => {
   const evidence = independentVerifierEvidence({
@@ -79,4 +85,28 @@ test('failed command diagnostic is short, redacted, and removes runner paths', (
   assert.match(diagnostic, /<PATH>/);
   assert.match(diagnostic, /\[REDACTED\]/);
   assert.doesNotMatch(diagnostic, /super-secret-value|\/home\/runner/);
+});
+
+test('external verifier failure stops without another paid refinement', () => {
+  assert.deepEqual(verifierRefinementDecision({
+    status: 'BLOCKED',
+    error: { code: 'GITHUB_RELEASE_UNAVAILABLE' },
+  }), { refine: false, code: 'GITHUB_RELEASE_UNAVAILABLE', status: 'BLOCKED_EXTERNAL' });
+});
+
+test('a real plugin smoke failure remains eligible for one refinement', () => {
+  assert.deepEqual(verifierRefinementDecision({
+    status: 'BLOCKED',
+    error: { code: 'SMOKE_ASSERTION_FAILED' },
+  }), { refine: true, code: 'SMOKE_ASSERTION_FAILED', status: 'BLOCKED' });
+});
+
+test('only completed model calls consume durable repair attempts after a later failure', () => {
+  assert.equal(successfulModelAttempts([
+    { name: 'install-repair-dsh', ok: true },
+    { name: 'run-repair-dsh', ok: true },
+    { name: 'independent-verifier-attempt-1', ok: false },
+    { name: 'run-repair-refinement', ok: false },
+  ]), 1);
+  assert.equal(successfulModelAttempts([{ name: 'run-repair-dsh', ok: false }]), 0);
 });
