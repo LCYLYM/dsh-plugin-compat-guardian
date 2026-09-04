@@ -8,6 +8,7 @@
 模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
 模型错误/防循环专项验收 SHA：`236252455e05acca890a28ff566c9a6916169f76`
 社区真实维修与错误分类修复 SHA：`3de35600566ad1f4ff318e2de3d99de48b6ec72a`
+rc.1 日志驱动加固 SHA：`3eca47b4d184ab8f6a0217de9f44249558e0b7ea`
 实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`
 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)
 

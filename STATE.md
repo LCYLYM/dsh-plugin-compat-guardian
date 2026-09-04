@@ -8,7 +8,7 @@
 
 本轮真实结果：`dsh-web-ui` 产生并打开 PR #7（AI 将 `maxHost` 从 `0.1.1-rc.2` 调整到 `0.1.2-rc.1`，独立 verifier 通过，总用时约 456.6 秒）；`dsh-whale-report` 的模型维修通过 verifier 但生成 2,829 个 `.pnpm-store` 缓存文件，16 MiB 补丁输出被截断后才在发布阶段失败；`dsh-plugin-better-sidebar-plugin-office` 的维修在收集 diff 时超时并冻结；`dsh-ankh-guard` 的维修调用约 12.8 分钟后以 DSH 命令失败并冻结。
 
-2026-09-04 日志驱动加固已完成，Guardian 本地测试 95/95 通过：缓存/控制路径改为不可被仓库配置覆盖的内置禁止项，包管理器缓存路由到仓库外，`git add` 前先扫描路径；命令输出显式记录截断状态，超过 16 MiB 的补丁不再进入 verifier；publisher 校验补丁 SHA-256、历史截断标记和 `git apply --check`；失败报告新增最多 500 字符的去敏 stderr 摘要。`maxHost` 审核边界的第一轮提示词只做单字段更新，完整 verifier 若发现真实 API 故障再进入第二轮源码维修。真实 Whale repair artifact 重放现于发布前返回 `PROTECTED_PATH_CHANGED`，旧截断 artifact 返回 `PUBLISH_PATCH_TRUNCATED`。四个测试 fork 的 Guardian workflow 继续保持关闭，未重新消耗模型额度。
+2026-09-04 日志驱动加固已合并至 Guardian `3eca47b4d184ab8f6a0217de9f44249558e0b7ea`，Guardian 本地测试 95/95 通过：缓存/控制路径改为不可被仓库配置覆盖的内置禁止项，包管理器缓存路由到仓库外，`git add` 前先扫描路径；命令输出显式记录截断状态，超过 16 MiB 的补丁不再进入 verifier；publisher 校验补丁 SHA-256、历史截断标记和 `git apply --check`；失败报告新增最多 500 字符的去敏 stderr 摘要。`maxHost` 审核边界的第一轮提示词只做单字段更新，完整 verifier 若发现真实 API 故障再进入第二轮源码维修。真实 Whale repair artifact 重放现于发布前返回 `PROTECTED_PATH_CHANGED`，旧截断 artifact 返回 `PUBLISH_PATCH_TRUNCATED`。四个测试 fork 已固定到该 SHA，Guardian workflow 继续保持 `disabled_manually`，未重新消耗模型额度。
 
 2026-08-22 专项审计修复已 PASS：模型配置/外部错误持久化、未合并维修 PR 去重、自定义 DSH route、严格配置验证和失败 verified 不前移均已落地。
 
