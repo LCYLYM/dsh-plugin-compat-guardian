@@ -43,6 +43,7 @@ repair:
     - .dsh-compat.yml
     - .dsh-compat.lock.json
     - compatibility/**
+    - node_modules/**
     - .pnpm-store/**
     - .npm/**
     - .yarn/cache/**

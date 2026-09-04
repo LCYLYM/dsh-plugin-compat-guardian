@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { classifyManifestChanges, classifyRepairDiff, diffStatistics } from '../lib/diff-policy.js';
-import { assertRepairPaths } from '../lib/repair.js';
+import { assertRepairPaths, collectRepairPaths } from '../lib/repair.js';
 import { DEFAULT_CONFIG } from '../lib/config.js';
 
 test('repair path guard rejects generated package-manager caches', () => {
@@ -18,6 +18,26 @@ test('repair path guard rejects generated package-manager caches', () => {
     () => assertRepairPaths(['.yarn/cache/pkg-npm-1.0.0.zip'], DEFAULT_CONFIG.repair.protected_paths),
     error => error?.code === 'PROTECTED_PATH_CHANGED',
   );
+});
+
+test('repair path scan sees generated caches before git add', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'guardian-prestage-scan-'));
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    execFileSync('git', ['config', 'user.name', 'Guardian Test'], { cwd: root });
+    execFileSync('git', ['config', 'user.email', 'guardian@example.invalid'], { cwd: root });
+    await writeFile(join(root, 'package.json'), '{"name":"fixture"}\n');
+    execFileSync('git', ['add', 'package.json'], { cwd: root });
+    execFileSync('git', ['commit', '-qm', 'fixture'], { cwd: root });
+    await mkdir(join(root, '.pnpm-store', 'v10'), { recursive: true });
+    await writeFile(join(root, '.pnpm-store', 'v10', 'cache-entry'), 'generated');
+    const paths = await collectRepairPaths(root);
+    assert.deepEqual(paths, ['.pnpm-store/v10/cache-entry']);
+    assert.throws(() => assertRepairPaths(paths, []), { code: 'PROTECTED_PATH_CHANGED' });
+    assert.equal(execFileSync('git', ['diff', '--cached', '--name-only'], { cwd: root, encoding: 'utf8' }), '');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('ordinary DSH range changes can use configured delivery', () => {

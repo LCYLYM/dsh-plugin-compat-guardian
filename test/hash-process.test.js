@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { objectHash, stableStringify } from '../lib/hash.js';
-import { redactText } from '../lib/process.js';
+import { redactText, runCommand } from '../lib/process.js';
 import { runtimeSnapshotIdentity, trackedTreeDigest } from '../lib/verifier.js';
 
 test('stableStringify and objectHash ignore object key insertion order', () => {
@@ -23,6 +23,16 @@ test('redactor removes explicit secrets and common credential fields', () => {
     assert.ok(!redacted.includes(forbidden));
   }
   assert.match(redacted, /\[REDACTED\]/);
+});
+
+test('command result marks bounded stdout and stderr instead of silently accepting truncation', async () => {
+  const result = await runCommand(process.execPath, ['-e', 'process.stdout.write("x".repeat(32)); process.stderr.write("y".repeat(32))'], {
+    outputLimit: 8,
+  });
+  assert.equal(result.stdoutTruncated, true);
+  assert.equal(result.stderrTruncated, true);
+  assert.match(result.stdout, /output truncated/);
+  assert.match(result.stderr, /output truncated/);
 });
 
 test('tracked source digest ignores the machine lock but not plugin source', () => {

@@ -1,6 +1,8 @@
 # V1 最终验收报告
 
-日期：2026-08-23
+首次验收日期：2026-08-23
+
+最新回归日期：2026-09-04
 自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
 社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
 模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
@@ -14,6 +16,21 @@
 V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。除 fixture 外，四个社区 fork 都完成了 rc.2 repair DSH 调用、实际 diff、独立 rc.2 verifier、自动 PR、合并和无模型收敛。
 
 验收不把“已实现可选 adapter”写成“已给外部收件人投递”；本次没有 email/TG/webhook 目标和 publisher PAT，所以这些只有确定性测试或安全等待证据。
+
+## 官方 Release `0.1.2-rc.1` 回归与日志加固（2026-09-03 至 2026-09-04）
+
+Guardian 已改为以官方 `dsh-v*` GitHub Release 为更新信号，并要求相同精确版本的 NPM 制品。`dsh-v0.1.2-rc.1` / `@deepseek-ai/dsh@0.1.2-rc.1` 在四个社区 fork 上触发了真实 repair DSH；结果按 verifier、publisher 和最终 PR 分开判定：
+
+| 样本 | 公开 run / PR | 模型步骤 / token | 最终结果 |
+| --- | --- | ---: | --- |
+| dsh-web-ui | [run 33754127499](https://github.com/LCYLYM/dsh-web-ui/actions/runs/33754127499) / [PR #7](https://github.com/LCYLYM/dsh-web-ui/pull/7) | 409.91s / 2,289,363 | PASS；只更新 workspace manifest 的 `maxHost`，独立 verifier 18.90s，PR 可合并但尚未合并 |
+| Whale Report | [run 33754120163](https://github.com/LCYLYM/dsh-whale-report/actions/runs/33754120163) | 300.57s / 999,587 | BLOCKED；模型生成 2,829 个 `.pnpm-store` 文件，16 MiB diff 被旧 runner 截断；verifier 虽通过，但 publisher 正确未落库 |
+| Better Sidebar Office | [run 33754134991](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/33754134991) / [state PR #7](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/pull/7) | 233.20s / 589,248 | BLOCKED；收集 binary diff 超过 30s，发布冻结状态 |
+| Ankh Guard | [run 33754143975](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33754143975) / [state PR #7](https://github.com/LCYLYM/dsh-ankh-guard/pull/7) | 770.27s / 2,705,592 | BLOCKED；DSH exit 1，旧报告只保留输出长度和哈希，无法从 artifact 判断具体 stderr |
+
+这些日志驱动了四项实现修复：内置缓存/控制路径与仓库配置取并集；包管理器缓存路由到仓库外并在 `git add` 前扫描；命令输出显式标记截断，超过 16 MiB 的补丁不得进入 verifier；publisher 校验补丁 SHA-256、截断标记和 `git apply --check`。未知 DSH 失败现在额外保留最多 500 字符的去敏 stderr 摘要。`maxHost` 边界第一轮只要求单字段更新，完整 candidate verifier 若发现真实 API 故障，第二轮再维修源码。
+
+旧 Whale artifact 已直接重放：2,829 个缓存路径现在返回 `PROTECTED_PATH_CHANGED`，旧截断补丁返回 `PUBLISH_PATCH_TRUNCATED`。本轮没有重新开启四个 fork workflow，也没有再次调用模型。
 
 ## 模型错误与防循环专项（2026-08-22）
 

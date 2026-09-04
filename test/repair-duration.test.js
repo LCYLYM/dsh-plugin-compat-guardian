@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { CommandError } from '../lib/errors.js';
-import { classifyRepairFailure, independentVerifierEvidence } from '../lib/repair.js';
+import { classifyRepairFailure, independentVerifierEvidence, sanitizedDiagnostic } from '../lib/repair.js';
 
 test('repair evidence reports the independent verifier duration', () => {
   const evidence = independentVerifierEvidence({
@@ -52,4 +52,31 @@ test('a verifier command mentioning 401 is not misreported as a model credential
   const modelFailure = classifyRepairFailure(error, 'model-call');
   assert.equal(modelFailure.code, 'MODEL_CREDENTIAL_REJECTED');
   assert.equal(modelFailure.status, 'BLOCKED_CONFIG');
+});
+
+test('repair diff timeout has a durable, actionable failure code', () => {
+  const error = new CommandError({
+    displayCommand: 'git diff --cached --binary',
+    exitCode: null,
+    timedOut: true,
+    timeoutMs: 30_000,
+    stdout: '',
+    stderr: '',
+    durationMs: 30_001,
+  });
+  const failure = classifyRepairFailure(error, 'repair-diff');
+  assert.equal(failure.code, 'REPAIR_DIFF_TIMEOUT');
+  assert.equal(failure.status, 'BLOCKED');
+  assert.match(failure.message, /不会发布残缺补丁/);
+});
+
+test('failed command diagnostic is short, redacted, and removes runner paths', () => {
+  const diagnostic = sanitizedDiagnostic({
+    exitCode: 1,
+    timedOut: false,
+    stderr: 'Error at /home/runner/work/repo/repo/file.js api_key=super-secret-value',
+  });
+  assert.match(diagnostic, /<PATH>/);
+  assert.match(diagnostic, /\[REDACTED\]/);
+  assert.doesNotMatch(diagnostic, /super-secret-value|\/home\/runner/);
 });

@@ -60,12 +60,12 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D18 | 根 DSH 版本号没变但实际安装内容变了，就重新执行完整兼容测试；此时不调用 repair model，也不新建预算。若已审核 contract 要求真实模型 smoke，该 smoke 仍立即执行并把 usage 计入同一版本 campaign。 |
 | D19 | M0 先在没有模型 key 的情况下验证监控与完整兼容测试；通过后才在隔离测试分支恢复历史 `httpServer` 错误，验证模型维修和 PR。两个阶段均不开自动合并或直接推送。 |
 | D20 | 当前处于 grilling 阶段；用户明确宣布 grilling 结束并要求开工前，只允许调研和文档，不实施 workflow、故障场景、secrets 或模型调用。 |
-| D21 | repair DSH 默认可修改当前仓库内普通插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret 和仓库外路径进入短禁止清单。 |
+| D21 | repair DSH 默认可修改当前仓库内普通插件文件，不要求每个仓库维护长 allowlist；workflow、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret、`node_modules`、包管理器缓存和仓库外路径进入不可被仓库配置覆盖的短禁止清单。 |
 | D22 | repair DSH 可以提案修改仓库测试，但只要 diff 触及测试文件、测试配置或测试命令，本次交付就强制为普通 PR；即使仓库开启 auto-merge/direct-push，也必须人工审核后才能落库。 |
 | D23 | 依赖改动必须与当前 DSH 兼容故障直接相关且保持最小；禁止全量升级、无关升级和更换包管理器。新增/删除依赖、跨 major 升级或改安装生命周期脚本时强制人工 PR；普通 DSH 相关版本范围与 lockfile 调整可在完整复验后使用所选交付模式。 |
 | D24 | 仓库有明确构建命令时以源码为权威，repair 后由 verifier 干净重建，已跟踪的 `lib/dist` 必须与重建结果一致；无法复现则失败。仓库没有构建命令且 `lib` 本身被维护时，把它当普通源码。 |
 | D25 | repair DSH 可新增、修改和删除普通仓库文件；不为文件创建、重命名或删除另设复杂分级。不能删除的内容直接复用 D21 的保护清单，其他误删由原始 pack/install/contract/verifier 自然判失败。 |
-| D26 | 不新增 changed-files/changed-lines 硬上限；报告 diff 文件数和增删行数供人判断，但不据此阻断。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
+| D26 | 不新增 changed-files/changed-lines 业务上限；报告 diff 文件数和增删行数供人判断。补丁传输保留 16 MiB 完整性上限，超过时明确 BLOCKED，不能把截断输出当成完整补丁。防失控继续由 token/CNY/墙钟/轮次预算、单次自动维修、保护路径和独立 verifier 承担。 |
 | D27 | 模型 Secret 只用于基于可信默认分支 SHA 的 `schedule`、`workflow_dispatch` 和默认分支 `push` campaign；D37 的已审核 candidate 固定 smoke 可在兼容结论前获得一次，repair DSH 则只在无 key 检查确认失败后获得。PR/fork、`pull_request_target` 检出的 PR 代码和任意 ref 都不得获得它。 |
 | D28 | 产品只处理 DSH 更新导致的插件兼容问题；测试、预算、通知和交付都只为“发现、证明、修好并交付这类问题”服务，不扩成通用依赖升级、CI 修复或代码维护机器人。 |
 | D29 | 默认每 6 小时检查一次官方 GitHub Release 与对应 NPM 制品，另保留手工立即检查，以及默认分支 Guardian 配置、lock 或已审核 smoke contract 变更触发；普通插件源码 push 不触发。cron 只是唤醒器，延迟后仍直接收敛到当时最新 Release。 |
@@ -351,7 +351,7 @@ repair DSH 默认可以搜索，不要求每次维修都搜。默认提示词建
 
 默认可修改当前仓库内所有已跟踪的插件文件，包括源码、`src/lib`、`cordis.patch.yml`、`package.json`、安装脚本、仓库测试和文档。插件结构差异很大，因此不要求用户为每个仓库维护一份长 allowlist。
 
-短禁止清单保护控制面和独立验收面：`.github/workflows/**`、`.dsh-compat.yml`、`.dsh-compat.lock.json`、onboarding smoke contract、独立 verifier、secret/凭据文件，以及解析后落到仓库外的路径。禁止项不能由 repair prompt、仓库文件或模型输出放宽；publisher 只接受禁止路径之外的 diff。最终 PASS 仍由 repair DSH 无法修改的 contract/verifier 判定。
+短禁止清单保护控制面和独立验收面：`.github/workflows/**`、`.dsh-compat.yml`、`.dsh-compat.lock.json`、onboarding smoke contract、独立 verifier、secret/凭据文件、`node_modules/**`、`.pnpm-store/**`、`.npm/**`、`.yarn/cache/**`，以及解析后落到仓库外的路径。内置禁止项与仓库自定义项取并集，不能由配置、repair prompt、仓库文件或模型输出放宽。模型进程同时把 npm、pnpm 和 Yarn 缓存路由到仓库外临时目录；Guardian 在 `git add` 前扫描已跟踪修改和未跟踪文件，先拒绝缓存污染，再生成 diff。publisher 只接受禁止路径之外的 diff。最终 PASS 仍由 repair DSH 无法修改的 contract/verifier 判定。
 
 仓库自己的测试允许随兼容修复一起提案修改，但不能让机器人同时修改测试又自动把结果落进默认分支。publisher 在 diff 中发现测试文件、测试配置，或 `package.json` 等 manifest 里的测试命令发生变化时，必须把本次交付强制降级为普通 PR，并在报告里列出触发路径；仓库配置的 `auto-merge`/`direct-push` 只对没有改动测试面的维修生效。新增测试也按测试改动处理。
 
@@ -361,9 +361,11 @@ repair DSH 默认可以搜索，不要求每次维修都搜。默认提示词建
 
 文件增删保持简单：repair DSH 可以在仓库内新增、修改或删除普通文件，不单独区分重命名、可执行文件、隐藏文件或根目录文件。`.github/workflows/**`、Guardian 配置/lock、onboarding smoke contract、独立 verifier、secret/凭据和仓库外路径本来就不可修改，因此也不可删除。普通关键文件若被误删，原始 build/test/pack/install/contract/verifier 必须自然失败，不再维护第二份“关键文件清单”。已经确认的测试面和依赖语义规则仍适用于新增或删除内容。
 
-不把 diff 大小变成另一套预算。报告固定记录改动文件数、新增行数和删除行数，但不设置 `maxChangedFiles` 或 `maxChangedLines`，因为生成产物和必要重构会让这些数字失真。运行失控由已有的模型 token/CNY、墙钟、维修轮次、每版本一次自动维修、保护路径和独立 verifier 机械限制。
+不把 diff 大小变成另一套业务预算。报告固定记录改动文件数、新增行数和删除行数，但不设置 `maxChangedFiles` 或 `maxChangedLines`，因为生成产物和必要重构会让这些数字失真。实现层保留 16 MiB 补丁传输完整性上限：命令输出一旦被截断就立即 BLOCKED，不能进入 verifier；publisher 再核对报告中的 SHA-256、拒绝历史截断标记，并先执行 `git apply --check`。运行失控仍主要由模型 token/CNY、墙钟、维修轮次、每版本一次自动维修、保护路径和独立 verifier 机械限制。
 
 默认最多两轮。每轮结束后 agent 只能交付 diff；独立 verifier 从干净副本应用 diff 并重新执行原始合同。
+
+`HOST_VERSION_UNSUPPORTED` 且明确来自 `maxHost` 时，第一轮提示词只允许把所选插件 manifest 的 `dsh.compat.maxHost` 更新到候选精确版本，然后立即交给独立 verifier；不要求模型安装依赖、重建或广泛搜索。若完整 candidate gate 随后暴露真实 API 断裂，第二轮才携带该具体失败做源码维修。这样保留 DSH 维修与独立验收边界，同时避免把一个声明式审核边界扩成数百万 token 的全仓库探索。
 
 ## 12. Campaign 预算
 
