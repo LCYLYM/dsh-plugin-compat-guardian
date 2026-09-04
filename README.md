@@ -116,7 +116,7 @@ Actions Summary、Issue 和 PR 默认使用中文，先给结论和下一步，�
 - 确定性测试立即跑；只有确实要调模型修代码时，才可选等待 DeepSeek 低价时段。
 - 同一版本默认只自动维修一次。额度到顶后，只有提高限额，或把 `.dsh-compat.lock.json` 中 `resetBudget` 从 `N` 改成 `Y` 并提交，才再维修一次；该次 `Y` 会立即消费回 `N`。
 - 缺 Key、401/403、错误 model/base URL/provider 会产生可读的 `BLOCKED_CONFIG` 状态 PR；修正前 schedule 不会每 6 小时再调模型。
-- timeout/429/5xx 不循环烧钱：DSH provider 等待一分钟后在同一模型回合内最多重试一次，仍失败则持久化为 `BLOCKED_EXTERNAL`。
+- timeout/429/5xx/明确过载不直接放弃：DSH provider 在同一模型回合内每两分钟自动重试一次、最多再试两次，仍失败才持久化为 `BLOCKED_EXTERNAL`。
 - 同目标的状态分支或维修 PR 尚未合并时，后续 schedule 在调模型前就停下，不会重复维修。
 
 CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSeek 账户账单级硬限额。绝对账户限额仍应在 provider 侧设置。

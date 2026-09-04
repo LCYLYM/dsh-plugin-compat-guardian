@@ -4,10 +4,10 @@
     baseURL: https://api.deepseek.com
     retryPolicy:
       mode: normal
-      maxRetries: 1
+      maxRetries: 2
       backoff:
-        initialDelayMs: 60000
-        maxDelayMs: 60000
+        initialDelayMs: 120000
+        maxDelayMs: 120000
         jitterRatio: 0
 
 - id: agent-default-model

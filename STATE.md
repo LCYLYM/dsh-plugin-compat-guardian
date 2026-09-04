@@ -26,7 +26,7 @@
 - 支持 `pull-request`、`auto-merge`、`direct-push`。测试面或高风险依赖变更会强制降级为人工 PR；保护路径变更直接拒绝。
 - Actions Summary 每次生成；campaign Issue、email、Telegram 和 webhook 按稳定 event ID 去重，NOOP 不发外部通知。
 - `BLOCKED_EXTERNAL`、`BLOCKED_CONTRACT`、`STALE_SOURCE`、`SUPERSEDED`、旧合并分支清理和 contract-only PR 路径均已实现。
-- 缺 Key/401/403/错误 model、base URL 或 provider 持久化为 `BLOCKED_CONFIG`；429/5xx/timeout 由 DSH provider 最多重试一次后持久化为 `BLOCKED_EXTERNAL`。
+- 缺 Key/401/403/错误 model、base URL 或 provider 持久化为 `BLOCKED_CONFIG`；429/5xx/timeout/明确过载由 DSH provider 每两分钟自动重试一次、最多再试两次后持久化为 `BLOCKED_EXTERNAL`。
 - repair/model smoke 在调模型前同时检查 state 与维修分支；仅合并失败 lock 造成的 push 不会触发相同输入再跑。
 - 模型 smoke 失败保留上一个真正 verified，不会把“只过了机械 gate”的 candidate 误写成已兼容。
 - 真实 `@deepseek-ai/dsh@0.1.1-rc.2` 本地 HTTP 探针已证明自定义 URL、Bearer Key、model 均到达原生 `/chat/completions`；401/错 model/404/429/503/timeout 分类与重试上限符合预期。
