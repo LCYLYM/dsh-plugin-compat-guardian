@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { accumulateRouteCny, estimateCny, estimateRouteCny, priceBand, projectTokenUsage, readDshSearchTelemetry } from '../lib/budget.js';
-import { assertRepairPaths, repairDshArgs, repairResumeAllowed } from '../lib/repair.js';
+import { assertRepairPaths, repairDshArgs, repairPrompt, repairResumeAllowed } from '../lib/repair.js';
 
 test('usage projection replaces duplicate chunk/message samples per step', () => {
   const events = [
@@ -75,6 +75,16 @@ test('repair path guard permits plugin source and blocks control paths', () => {
   assert.throws(() => assertRepairPaths(['compatibility/dsh-smoke.yml'], protectedPaths), { code: 'PROTECTED_PATH_CHANGED' });
   assert.throws(() => assertRepairPaths(['../outside'], protectedPaths), { code: 'REPAIR_PATH_ESCAPE' });
   assert.throws(() => assertRepairPaths(['config/credentials.json'], protectedPaths), { code: 'PROTECTED_PATH_CHANGED' });
+  assert.throws(() => assertRepairPaths(['.pnpm-store/v10/files/cache-entry'], []), { code: 'PROTECTED_PATH_CHANGED' });
+  assert.throws(() => assertRepairPaths(['node_modules/pkg/index.js'], []), { code: 'PROTECTED_PATH_CHANGED' });
+});
+
+test('repair path guard caps large blocked-path diagnostics', () => {
+  const paths = Array.from({ length: 25 }, (_, index) => `.pnpm-store/v10/files/${index}`);
+  assert.throws(
+    () => assertRepairPaths(paths, []),
+    error => error.code === 'PROTECTED_PATH_CHANGED' && error.message.includes('(+15 more)') && !error.message.includes('/24'),
+  );
 });
 
 test('same-version repair resumes only on N-to-Y intent or a larger budget', () => {
@@ -95,6 +105,17 @@ test('repair invokes the rc.2 headless profile with launcher flags before the ta
     '/tmp/repair.yml',
     'fix the plugin',
   ]);
+});
+
+test('reviewed maxHost failures get a one-file first-attempt strategy', () => {
+  const prompt = repairPrompt({
+    candidate: { package: '@deepseek-ai/dsh', version: '0.1.2-rc.1' },
+    failure: { code: 'HOST_VERSION_UNSUPPORTED', message: 'plugin declares DSH <= 0.1.1-rc.2, candidate is 0.1.2-rc.1' },
+    config: { smoke: { hints: '' } },
+  });
+  assert.match(prompt, /change only dsh\.compat\.maxHost to 0\.1\.2-rc\.1/);
+  assert.match(prompt, /Do not install dependencies/);
+  assert.match(prompt, /independent Guardian verifier/);
 });
 
 test('search telemetry persists only counts and hashes, not queries or results', async () => {

@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import { sha256 } from '../lib/hash.js';
+import { validateRepairPatch } from '../lib/publisher.js';
+
 test('direct push treats the campaign issue as optional but keeps git publication strict', async () => {
   const source = await readFile(new URL('../lib/publisher.js', import.meta.url), 'utf8');
 
@@ -9,4 +12,17 @@ test('direct push treats the campaign issue as optional but keeps git publicatio
   assert.match(source, /if \(issue\.exitCode === 0\)/);
   assert.match(source, /runCommand\('git', \['push', 'origin', `HEAD:\$\{defaultBranch\}`\]/);
   assert.doesNotMatch(source, /HEAD:\$\{defaultBranch\}`\], \{[^}]*reject:/s);
+});
+
+test('publisher rejects truncated or tampered repair artifacts before git apply', () => {
+  const patch = 'diff --git a/a b/a\n';
+  assert.doesNotThrow(() => validateRepairPatch({ repair: { patchSha256: sha256(patch) } }, patch));
+  assert.throws(
+    () => validateRepairPatch({ repair: { patchSha256: sha256(patch) } }, '[output truncated to final 16 characters]\npartial'),
+    { code: 'PUBLISH_PATCH_TRUNCATED' },
+  );
+  assert.throws(
+    () => validateRepairPatch({ repair: { patchSha256: sha256(patch) } }, `${patch}tampered`),
+    { code: 'PUBLISH_PATCH_DIGEST_MISMATCH' },
+  );
 });

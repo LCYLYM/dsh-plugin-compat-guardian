@@ -52,6 +52,16 @@ test('blocked report explains the next action without hiding the error code', ()
   assert.match(markdown, /MODEL_SMOKE_RPC/);
 });
 
+test('blocked repair report shows a sanitized diagnostic without raw model output', () => {
+  const markdown = renderMarkdown({
+    status: 'BLOCKED',
+    candidate: { version: '0.1.2-rc.1' },
+    steps: [{ name: 'run-repair-dsh', ok: false, durationMs: 100, diagnostic: 'Provider connection closed safely' }],
+    error: { code: 'COMMAND_FAILED', message: 'DSH exited with code 1' },
+  });
+  assert.match(markdown, /去敏诊断：`Provider connection closed safely`/);
+});
+
 test('pending GitHub release report explains that model repair is not started', () => {
   const markdown = renderMarkdown({
     status: 'WAITING_FOR_NPM_ARTIFACT',
