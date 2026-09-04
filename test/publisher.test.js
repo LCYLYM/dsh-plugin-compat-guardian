@@ -14,6 +14,12 @@ test('direct push treats the campaign issue as optional but keeps git publicatio
   assert.doesNotMatch(source, /HEAD:\$\{defaultBranch\}`\], \{[^}]*reject:/s);
 });
 
+test('pull request publication always names the repository default branch', async () => {
+  const source = await readFile(new URL('../lib/publisher.js', import.meta.url), 'utf8');
+
+  assert.match(source, /gh', \['pr', 'create', '--base', defaultBranch, '--head', branch/);
+});
+
 test('publisher rejects truncated or tampered repair artifacts before git apply', () => {
   const patch = 'diff --git a/a b/a\n';
   assert.doesNotThrow(() => validateRepairPatch({ repair: { patchSha256: sha256(patch) } }, patch));
