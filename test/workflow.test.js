@@ -40,10 +40,18 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
 
   assert.doesNotMatch(source, /pull_request_target|pull_request:/);
   assert.doesNotMatch(JSON.stringify(workflow.jobs.verify), /DEEPSEEK_API_KEY|secrets\./);
+  assert.equal(
+    workflow.jobs.verify.steps.find(step => step.id === 'verify').env.GITHUB_TOKEN,
+    '${{ github.token }}',
+  );
   assert.doesNotMatch(JSON.stringify(workflow.jobs.publish), /DEEPSEEK_API_KEY|deepseek_api_key/);
   assert.doesNotMatch(JSON.stringify(workflow.jobs['publish-repair']), /DEEPSEEK_API_KEY|deepseek_api_key/);
   assert.doesNotMatch(JSON.stringify(workflow.jobs['publish-blocked-state']), /DEEPSEEK_API_KEY|secrets\./);
   assert.match(JSON.stringify(workflow.jobs.repair), /DEEPSEEK_API_KEY.*secrets\.deepseek_api_key/);
+  assert.equal(
+    workflow.jobs.repair.steps.find(step => step.id === 'repair').env.GITHUB_TOKEN,
+    '${{ github.token }}',
+  );
   assert.match(JSON.stringify(workflow.jobs['candidate-model-smoke']), /DEEPSEEK_API_KEY.*secrets\.deepseek_api_key/);
   assert.doesNotMatch(JSON.stringify(workflow.jobs['candidate-model-smoke'].permissions), /write/);
   assert.match(JSON.stringify(workflow.jobs.repair.outputs), /status.*steps\.repair\.outputs\.status/);
