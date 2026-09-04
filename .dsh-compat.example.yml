@@ -32,6 +32,9 @@ repair:
   # DSH provider id 与 wire model id，均可按仓库已有 provider 改写。
   provider: deepseek-official
   model: deepseek-v4-flash-vision-exp
+  # 可选：自定义 OpenAI-compatible 路由若限制 max_tokens，在这里写它允许的单次输出上限。
+  # null 表示继续使用当前 repair DSH adapter 的默认值。
+  max_output_tokens: null
   model_policy: pin-per-campaign
   # 检测和确定性复测立即执行；只有模型维修等待低价窗口。
   start_policy: low-price-window # immediate | low-price-window

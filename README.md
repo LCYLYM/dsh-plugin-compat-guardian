@@ -128,7 +128,7 @@ CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSe
 - 候选 DSH：默认跟踪官方 `deepseek-ai/deepseek-harness` 的 `dsh-v*` GitHub Release，包含 prerelease；随后要求同版本 NPM 包存在并用它做真实安装。GitHub Release 已发布但 NPM 尚未发布时进入 `WAITING_FOR_NPM_ARTIFACT`，不调用模型、不建 PR。
 - 兼容候选按 Release tag + commit SHA + NPM integrity 锁定；同版本重新打 tag 也会被识别为新快照。需要兼容旧行为时可将 `watch.source` 改为 `npm`。
 - repair DSH：默认固定 `0.1.1-rc.2`，可改；每次 campaign 开始后锁定。
-- provider/model：默认 `deepseek-official/deepseek-v4-flash-vision-exp`。已实测支持自定义 DeepSeek `base_url`、Key 值、Key 环境变量引用和 model ID；Guardian 会直接 patch DSH 原生 `llm-deepseek` adapter。
+- provider/model：默认 `deepseek-official/deepseek-v4-flash-vision-exp`。已实测支持自定义 DeepSeek `base_url`、Key 值、Key 环境变量引用和 model ID；Guardian 会直接 patch DSH 原生 `llm-deepseek` adapter。自定义路由的单次输出上限低于 DSH 默认值时，用 `repair.max_output_tokens` 明确配置；这和整个 campaign 的 `budget.max_tokens` 是两个概念。
 - GitHub Secret：默认只需建立 `DEEPSEEK_API_KEY`。`.dsh-compat.yml` 的 `api_key_env` 是 DSH 进程内的凭据引用，不是 GitHub Secret 的名字；仓库用别的 Secret 名时，只改薄 workflow 中 `deepseek_api_key` 的 Secret 映射。
 - 其他 provider：只填一个 provider 字符串不会自动安装 adapter。V1 只对 `deepseek-official` 路由做自动配置；其他 provider 必须已在所选 DSH profile 中注册，否则会停在 `MODEL_PROVIDER_NOT_REGISTERED`。
 - DeepSeek 官方搜索：repair DSH 可按需使用，不要求每轮搜，不另设搜索次数上限。
