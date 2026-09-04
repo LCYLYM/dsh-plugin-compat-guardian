@@ -158,7 +158,7 @@ CNY 是按 DSH 暴露的 usage 和仓库中的价格快照估算，不是 DeepSe
 - `direct-push` 能绕过人工 review；开启前应配合分支保护、CODEOWNERS 和仓库自带测试。
 - Secret 只进入可信默认分支上的 repair job，以及 contract 明确启用的无 Git 写权模型 smoke job。fork PR 和普通 PR 代码不会拿到 Key。
 - `node_modules` 和 npm/pnpm/Yarn 缓存是不可配置放宽的禁止路径；Guardian 在暂存前检查，并拒绝截断、摘要不一致或无法干净应用的补丁。
-- 失败报告只展示最多 500 字符的去敏 stderr 摘要，保留错误代码、耗时和哈希，不保存完整模型对话。
+- 命令失败报告展示最多 500 字符的去敏 stderr 摘要；真实 `dsh web` 进程退出时保留最多 1000 字符的去敏可行动诊断，供人和第二轮维修定位。两者都保留错误代码、耗时和哈希，不保存完整模型对话、Secret 或本机路径。
 - 本项目与 DeepSeek 官方无隶属关系。使用前请审核 workflow、固定 SHA 和仓库权限。
 
 ## 文档导航

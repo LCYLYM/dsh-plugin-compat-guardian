@@ -26,6 +26,7 @@ test('repair evidence reports the independent verifier duration', () => {
     ok: true,
     durationMs: 6457,
     errorCode: undefined,
+    diagnostic: undefined,
   });
 });
 
@@ -40,6 +41,7 @@ test('repair evidence keeps a failed verifier code and ignores invalid durations
   assert.equal(evidence.ok, false);
   assert.equal(evidence.durationMs, 250);
   assert.equal(evidence.errorCode, 'COMMAND_FAILED');
+  assert.equal(evidence.diagnostic, undefined);
 });
 
 test('a verifier command mentioning 401 is not misreported as a model credential failure', () => {
@@ -99,6 +101,20 @@ test('a real plugin smoke failure remains eligible for one refinement', () => {
     status: 'BLOCKED',
     error: { code: 'SMOKE_ASSERTION_FAILED' },
   }), { refine: true, code: 'SMOKE_ASSERTION_FAILED', status: 'BLOCKED' });
+});
+
+test('a web crash without actionable diagnostics does not spend a blind refinement', () => {
+  assert.deepEqual(verifierRefinementDecision({
+    status: 'BLOCKED',
+    error: { code: 'WEB_EXITED', message: 'dsh web exited' },
+  }), { refine: false, code: 'WEB_EXITED', status: 'BLOCKED' });
+});
+
+test('a web crash with sanitized diagnostics remains eligible for targeted refinement', () => {
+  assert.deepEqual(verifierRefinementDecision({
+    status: 'BLOCKED',
+    error: { code: 'WEB_EXITED', diagnostic: 'missing export resolveSessionPreset' },
+  }), { refine: true, code: 'WEB_EXITED', status: 'BLOCKED' });
 });
 
 test('only completed model calls consume durable repair attempts after a later failure', () => {
