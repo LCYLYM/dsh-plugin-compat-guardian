@@ -5,6 +5,10 @@
     retryPolicy:
       mode: normal
       maxRetries: 1
+      backoff:
+        initialDelayMs: 60000
+        maxDelayMs: 60000
+        jitterRatio: 0
 
 - id: agent-default-model
   config:
