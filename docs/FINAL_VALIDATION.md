@@ -3,20 +3,42 @@
 首次验收日期：2026-08-23
 
 最新回归日期：2026-09-04
+当前 Guardian 核心 SHA：`d7bba2e8431c342e2405ffa170f975955937669b`
 自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
 社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
 模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
 模型错误/防循环专项验收 SHA：`236252455e05acca890a28ff566c9a6916169f76`
 社区真实维修与错误分类修复 SHA：`3de35600566ad1f4ff318e2de3d99de48b6ec72a`
 rc.1 日志驱动加固 SHA：`3eca47b4d184ab8f6a0217de9f44249558e0b7ea`
-实际目标：`@deepseek-ai/dsh@0.1.1-rc.2`
+当前社区回归目标：`@deepseek-ai/dsh@0.1.2-rc.1`
 公开 fixture：[`LCYLYM/dsh-attachments-guardian-fixture`](https://github.com/LCYLYM/dsh-attachments-guardian-fixture)
 
 ## 结论
 
-V1 实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。除 fixture 外，四个社区 fork 都完成了 rc.2 repair DSH 调用、实际 diff、独立 rc.2 verifier、自动 PR、合并和无模型收敛。
+V1 核心实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。当前 `0.1.2-rc.1` 四仓回归为 3 仓 PASS 且已产出可合并 PR，Ankh Guard 的插件兼容根因已被精确识别，但指定模型路由连续返回 429，因此本轮四仓总验收仍为 BLOCKED_EXTERNAL，不伪写成四仓全部修复。
 
 验收不把“已实现可选 adapter”写成“已给外部收件人投递”；本次没有 email/TG/webhook 目标和 publisher PAT，所以这些只有确定性测试或安全等待证据。
+
+## 最新净化回归（2026-09-04）
+
+四个测试 fork 都固定到 Guardian `d7bba2e8431c342e2405ffa170f975955937669b`，使用指定的 OpenAI-compatible 路由和 `glm-5.3-flash`。Secret 只保存在 GitHub Actions Secrets，未写入 workflow、报告、artifact 或 commit。
+
+| 样本 | 最新公开证据 | 真实结果 |
+| --- | --- | --- |
+| Whale Report | [run 33850598566](https://github.com/LCYLYM/dsh-whale-report/actions/runs/33850598566) / [PR #11](https://github.com/LCYLYM/dsh-whale-report/pull/11) | repair 模型 48.30s，独立 verifier 26.00s，166,125 token；仅更新 `package.json` 的 `maxHost` 和 verified lock。 |
+| dsh-web-ui | [run 33853207076](https://github.com/LCYLYM/dsh-web-ui/actions/runs/33853207076) / [PR #8](https://github.com/LCYLYM/dsh-web-ui/pull/8) | 21/21 机械检查 PASS，插件本已兼容，未调模型；PR 仅更新 verified lock。 |
+| Better Sidebar Office | [run 33854525152](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/33854525152) / [PR #10](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/pull/10) | repair 模型 103.94s，独立 verifier 48.52s，94,640 token；仅更新 `package.json` 的 `maxHost` 和 verified lock。 |
+| Ankh Guard | [diagnostic run 33870345861](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33870345861) / [recovery run 33871611546](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33871611546) | BLOCKED_EXTERNAL。独立 verifier 精确发现 `resolveSessionPreset` 已不再由 `@deepseek-ai/dsh-agent-presets` 导出；定向精修调用经一次等待重试后仍返回 429。已用 395,051 token，未产出未验证的修复 PR。 |
+
+这些日志暴露并修复了三个 Guardian 缺口：
+
+- `dsh web` 退出时，报告保留最多 1000 字符的 Secret/路径去敏诊断，第二轮不再只收到“web exited”。
+- 没有可行动诊断的 `WEB_EXITED` 不再调用付费 refinement；有诊断时把内容当作不可信错误数据，不允许其改变控制边界。
+- 同一 repair run 后续 verifier 复用首次核验过的 `pnpm-lock.yaml` 并执行 `--frozen-lockfile`，避免两轮之间上游传递依赖变化导致假性 `CANDIDATE_GRAPH_DRIFT`。
+
+本地连续两次完整 Ankh verifier 复现了同一缺失导出；第二次明确使用 `pnpm install --frozen-lockfile`，graph digest 两次均为 `4b940806a9d29c4cc95df154bce012dd5838e4925b8865f88317f406f3abc193`。`npm run check` 为 112/112 PASS。
+
+测试结束后，Ankh 的临时精确 channel 和第三轮恢复额度已撤回，恢复 `latest` 和默认两轮限制。四仓 Guardian workflow 均为 `disabled_manually`；本轮最高的官方 Release `dsh-v0.1.3-alpha.1` 尚无对应 NPM 制品时，[run 33869709973](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33869709973) 正确停在 `WAITING_FOR_NPM_ARTIFACT`，未调用模型。
 
 ## 官方 Release `0.1.2-rc.1` 回归与日志加固（2026-09-03 至 2026-09-04）
 
