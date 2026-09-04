@@ -19,6 +19,7 @@ const CASES = [
   ['bad base URL', new GuardianError('MODEL_RESPONSE', 'HTTP 404 endpoint not found'), 'BLOCKED_CONFIG', 'MODEL_ENDPOINT_NOT_FOUND', false],
   ['429', new GuardianError('MODEL_RESPONSE', 'HTTP 429 too many requests'), 'BLOCKED_EXTERNAL', 'MODEL_RATE_LIMITED', true],
   ['5xx', new GuardianError('MODEL_RESPONSE', 'HTTP 503 service unavailable'), 'BLOCKED_EXTERNAL', 'MODEL_PROVIDER_5XX', true],
+  ['provider overload', new GuardianError('MODEL_RESPONSE', 'SERVER: system cpu overloaded (current: 99.6%, threshold: 90%)'), 'BLOCKED_EXTERNAL', 'MODEL_PROVIDER_5XX', true],
   ['timeout', new GuardianError('MODEL_RESPONSE', 'request timed out'), 'BLOCKED_EXTERNAL', 'MODEL_PROVIDER_TIMEOUT', true],
   ['unreachable URL', new GuardianError('MODEL_RESPONSE', 'fetch failed: ECONNREFUSED'), 'BLOCKED_CONFIG', 'MODEL_PROVIDER_UNREACHABLE', false],
   ['unregistered provider', new GuardianError('MODEL_RESPONSE', 'no adapter registered for provider acme'), 'BLOCKED_CONFIG', 'MODEL_PROVIDER_NOT_REGISTERED', false],
@@ -49,8 +50,8 @@ test('custom DeepSeek env reference, base URLs, and model are wired into native 
     maxTokens: 131_072,
     retryPolicy: {
       mode: 'normal',
-      maxRetries: 1,
-      backoff: { initialDelayMs: 60_000, maxDelayMs: 60_000, jitterRatio: 0 },
+      maxRetries: 2,
+      backoff: { initialDelayMs: 120_000, maxDelayMs: 120_000, jitterRatio: 0 },
     },
   });
   assert.equal(rows.find(row => row.id === 'agent-default-model').config.model, 'custom-model-id');

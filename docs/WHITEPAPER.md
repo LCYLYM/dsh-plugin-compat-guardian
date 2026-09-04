@@ -128,7 +128,7 @@ detector/resolver + matching NPM artifact -----> frozen campaign snapshot
 | `PASS` | 原始 gate 全部真实通过 | publisher 交付一次最终 commit |
 | `BLOCKED` | 本目标不能再自动前进 | 等预算增加、reset 或明确新信号 |
 | `BLOCKED_CONFIG` | Key、provider、model 或 base URL 配置有问题 | 修正配置/Secret 后手工运行；schedule 不重复调模型 |
-| `BLOCKED_EXTERNAL` | provider timeout/429/5xx 重试一次仍失败 | 手工运行、相关配置变化或新目标恢复 |
+| `BLOCKED_EXTERNAL` | provider timeout/429/5xx/明确过载经两次分钟级退避仍失败 | 手工运行、相关配置变化或新目标恢复 |
 | `BLOCKED_CONTRACT` | 代码无法在现有契约下合理修复，契约可能需调整 | 单独开 contract PR，人审后重测 |
 | `ONBOARDING_BLOCKED` | 初始稳定版自身都不能通过 | 先修仓库/契约，不调用 repair |
 | `STALE_SOURCE` | 维修期间默认分支已有新提交 | 对新 SHA 先无模型重测 |
@@ -206,7 +206,7 @@ repair 可以改普通插件源码、manifest、脚本、测试和文档，但�
 
 默认关闭。只有用户在 onboarding PR 中审核并接受 `requires_model_turn: true`，才会执行。
 
-判定只看机械事实：插件处理了输入、图片/附件确实进入出站请求、provider 成功返回、DSH 消费了非空结果。不能要求模型回答固定句子，也不评价回答质量。timeout、429 或 5xx 由 DSH provider 等待一分钟后在同一回合内最多重试一次，再失败就是 `BLOCKED_EXTERNAL`，不会每六小时重新烧钱。缺 Key、401/403、错误 model/base URL/provider 是 `BLOCKED_CONFIG`，同样持久化冻结。
+判定只看机械事实：插件处理了输入、图片/附件确实进入出站请求、provider 成功返回、DSH 消费了非空结果。不能要求模型回答固定句子，也不评价回答质量。timeout、429、5xx 或明确过载由 DSH provider 在同一回合内每两分钟自动重试一次、最多再试两次，再失败就是 `BLOCKED_EXTERNAL`，不会每六小时重新烧钱。缺 Key、401/403、错误 model/base URL/provider 是 `BLOCKED_CONFIG`，同样持久化冻结。
 
 V1 不建设临时 key 代理，因此 candidate smoke 进程在该独立 step 内确实能看到 key；它没有 Git 写权限，日志和 artifact 只保存 hash、状态、耗时、usage 和脱敏错误。
 
