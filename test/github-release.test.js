@@ -3,12 +3,18 @@ import { once } from 'node:events';
 import { createServer } from 'node:http';
 import test from 'node:test';
 
-import { resolveGitHubReleaseSnapshot } from '../lib/registry.js';
+import { githubRequestHeaders, resolveGitHubReleaseSnapshot } from '../lib/registry.js';
 
 function json(response, value, status = 200) {
   response.writeHead(status, { 'content-type': 'application/json' });
   response.end(JSON.stringify(value));
 }
+
+test('GitHub token is sent only to the configured official API origin', () => {
+  const env = { GITHUB_TOKEN: 'fixture-token', GITHUB_API_URL: 'https://api.github.com' };
+  assert.equal(githubRequestHeaders('https://api.github.com/repos/acme/plugin', env).authorization, 'Bearer fixture-token');
+  assert.deepEqual(githubRequestHeaders('https://gateway.example.test/repos/acme/plugin', env), {});
+});
 
 test('GitHub release watcher selects the newest DSH prerelease and verifies its NPM artifact', async () => {
   const server = createServer((request, response) => {

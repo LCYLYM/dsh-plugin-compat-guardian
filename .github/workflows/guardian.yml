@@ -105,6 +105,7 @@ jobs:
       - name: Run no-model compatibility verifier
         id: verify
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           TARGET_DSH: ${{ inputs.target_dsh }}
           REPORT_DIRECTORY: ${{ runner.temp }}/guardian-report
         run: |
@@ -417,6 +418,7 @@ jobs:
         id: repair
         env:
           DEEPSEEK_API_KEY: ${{ secrets.deepseek_api_key }}
+          GITHUB_TOKEN: ${{ github.token }}
           REPAIR_DIRECTORY: ${{ runner.temp }}/guardian-repair
           GUARDIAN_PENDING_PUBLICATION: ${{ steps.pending.outputs.pending }}
           GUARDIAN_REPAIR_NOW: ${{ github.event_name == 'workflow_dispatch' }}
