@@ -45,9 +45,9 @@ Guardian 已改为以官方 `dsh-v*` GitHub Release 为更新信号，并要求�
 | 401 | 1 个 HTTP 请求 | `MODEL_CREDENTIAL_REJECTED / BLOCKED_CONFIG` |
 | 错误 model | 1 个 HTTP 请求 | `MODEL_NOT_FOUND / BLOCKED_CONFIG` |
 | 错误 endpoint/404 | 1 个 HTTP 请求 | `MODEL_ENDPOINT_NOT_FOUND / BLOCKED_CONFIG` |
-| 429 | 首请求 + 1 次 provider retry | `MODEL_RATE_LIMITED / BLOCKED_EXTERNAL` |
-| 503 | 首请求 + 1 次 provider retry | `MODEL_PROVIDER_5XX / BLOCKED_EXTERNAL` |
-| stream timeout | 首请求 + 1 次 provider retry | `MODEL_PROVIDER_TIMEOUT / BLOCKED_EXTERNAL` |
+| 429 | 首请求 + 一分钟退避后的 1 次 provider retry | `MODEL_RATE_LIMITED / BLOCKED_EXTERNAL` |
+| 503 | 首请求 + 一分钟退避后的 1 次 provider retry | `MODEL_PROVIDER_5XX / BLOCKED_EXTERNAL` |
+| stream timeout | 首请求 + 一分钟退避后的 1 次 provider retry | `MODEL_PROVIDER_TIMEOUT / BLOCKED_EXTERNAL` |
 | 不可达 URL | 真实 rc.2 连接已关闭的本地端口 | `MODEL_PROVIDER_UNREACHABLE / BLOCKED_CONFIG` |
 | 未注册 provider | 真实 rc.2 在发起 HTTP 前拒绝，端点 0 请求 | `MODEL_PROVIDER_NOT_REGISTERED / BLOCKED_CONFIG` |
 | repair 401 全路径 | 真实 repair DSH 命中 401 | blocked lock 为 `BLOCKED_CONFIG`，`automaticRepairUsed=false`，`attemptsUsed=0` |

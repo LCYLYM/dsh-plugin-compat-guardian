@@ -80,7 +80,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D38 | 真实模型 smoke 只按本轮冻结输入与可重复机械证据判定：插件实际处理输入、所需附件/图片进入模型请求、provider 成功返回且 DSH 收到非空结果。不得匹配具体回答措辞或主观质量；用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。 |
 | D39 | 真实模型 smoke 默认 `candidate-only`：只对目标 DSH 调用一次，沿用“插件当前本来可用”的假设；contract 可选 `differential`，再对已验证旧 DSH 调同一输入。发生 repair 后必须在目标 DSH 上重跑；完全相同的 DSH 快照、插件树与输入自动去重。 |
 | D40 | candidate 真实模型 smoke 属于兼容检测，发现候选后立即执行，不等待峰谷价格；只有确认需要修改代码的 repair DSH 默认等待低价窗口。 |
-| D41 | 真实模型 smoke 遇到 timeout、429 或 provider 5xx 时只立即重试一次；仍失败则为 `BLOCKED_EXTERNAL`，不启动 repair，也不由六小时 schedule 反复重试。手工运行、相关配置变更或新目标版本才是下一次信号。 |
+| D41 | 真实模型 smoke 遇到 timeout、429 或 provider 5xx 时等待一分钟后只重试一次；仍失败则为 `BLOCKED_EXTERNAL`，不启动 repair，也不由六小时 schedule 反复重试。手工运行、相关配置变更或新目标版本才是下一次信号。 |
 | D42 | 模型 smoke fixture 默认 `fixed`，使用 onboarding 已审核文件；可选 `agent-selected`，允许 DSH 在隔离 smoke 工作区中自行寻找、生成或下载公开文件。选定后的实际字节/URL/hash 在本 campaign 内冻结，差分或 repair 复测必须复用。 |
 | D43 | commit/PR/report 只持久化输入 hash、事件类型、请求中附件/图片存在性、状态、耗时、usage 和脱敏错误；失败可保留 7 天脱敏 Actions artifact。不得持久化 key、认证头、原始完整请求或完整模型对话。 |
 | D44 | Guardian 判断已审核 smoke contract 本身需要改变时，当前维修结束为 `BLOCKED_CONTRACT`，并自动创建独立 contract-change PR；该 PR 只含 contract/fixture 和解释，永远人工审核，不受 auto-merge/direct-push。合并后立即完整复测，但不重置已消耗预算或维修次数。 |
@@ -213,7 +213,7 @@ stateDiagram-v2
 6. repair agent 无权提高预算、改 workflow、改 smoke contract、改 lock 或判定 PASS。
 7. 新 `latest` 会使旧任务 `SUPERSEDED`，旧任务不能迟到发布。
 8. 默认分支源码变化只允许下一次无模型复测，不重置预算或 `automaticRepairUsed`；此前已经调用过模型时，同版本仍需额度增加或有效 reset 边沿才能再次维修。
-9. 模型 smoke 的 timeout、429、provider 5xx 只立即重试一次；再次失败即冻结为 `BLOCKED_EXTERNAL`，schedule 不得循环调用。
+9. 模型 smoke 的 timeout、429、provider 5xx 等待一分钟后只重试一次；再次失败即冻结为 `BLOCKED_EXTERNAL`，schedule 不得循环调用。
 10. 手工运行或相关 provider/contract 配置提交只允许 `BLOCKED_EXTERNAL` 再做一次 smoke，不重置维修预算或次数。
 
 ## 7. Onboarding：只审核一次什么
@@ -331,7 +331,7 @@ model:      deepseek-v4-flash-vision-exp
 
 这些只是仓库可覆盖的默认值，不是引擎常量。V1 会把 DeepSeek `baseURL` 和 `apiKeyEnv` 直接写入 DSH 原生 `llm-deepseek` patch，因此自定义 base URL、Key 引用和 wire model id 是真实生效的，不再只设环境变量等 DSH 猜。其他 provider id 仍必须已由所选 DSH profile 注册；Guardian 不会因为一个字符串就自动安装/配置 adapter，也不自造 provider 协议。未注册、错误凭据、model 或 URL 分别持久化为稳定错误代码，不静默回退。
 
-Guardian 为 `llm-deepseek` 设置 `retryPolicy.maxRetries: 1`，并禁用与兼容结论无关的 LLM 会话标题生成，避免计费外请求。这意味着 timeout/429/5xx 的主模型请求最多有一次 provider 重试；`attempts_used` 仍表示 Guardian 维修轮次，不是 HTTP 请求计数。
+Guardian 为 `llm-deepseek` 设置 `retryPolicy.maxRetries: 1` 和固定一分钟退避，并禁用与兼容结论无关的 LLM 会话标题生成，避免计费外请求。这意味着 timeout/429/5xx 的主模型请求只会在一分钟后再试一次；`attempts_used` 仍表示 Guardian 维修轮次，不是 HTTP 请求计数。
 
 当前官方 DSH 发布制品已把默认模型声明为 `inputModalities: [text, image]`，所以 repair agent 可以直接查看失败截图、页面渲染、图表或插件 UI，而不需要另造视觉 sidecar。
 

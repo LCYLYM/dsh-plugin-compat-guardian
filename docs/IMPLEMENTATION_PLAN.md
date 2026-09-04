@@ -73,7 +73,7 @@ M0 作为无模型基础切片保持可独立运行；repair/model、三种交�
 | R36 | M3 | request trace 的机械模型断言 | 随机措辞 PASS、未传附件/空结果 FAIL | pass |
 | R37 | M3 | candidate-only/differential、snapshot cache key | 四路径调用计数与去重 | partial |
 | R38 | M3 | candidate smoke 绕过 price queue | 高峰 candidate 立即、repair 等待 | pass |
-| R39 | M3 | timeout/429/5xx retry once + frozen external state | schedule NOOP、manual/config/new target 恢复 | pass |
+| R39 | M3 | timeout/429/5xx one-minute backoff retry + frozen external state | schedule NOOP、manual/config/new target 恢复 | pass |
 | R40 | M3 | fixed/agent-selected fixture sandbox 与 hash freeze | 生成/下载/越界/复用同 hash | partial |
 | R41 | M1/M3 | report redactor、7-day artifact policy | 日志/报告/产物 secret/raw payload 扫描 | pass |
 | R42 | M3 | `BLOCKED_CONTRACT` + 独立 contract-only PR | 永远人审、合并重测、预算保持 | partial |

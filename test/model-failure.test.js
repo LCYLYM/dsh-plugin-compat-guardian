@@ -47,7 +47,11 @@ test('custom DeepSeek env reference, base URLs, and model are wired into native 
     apiKeyEnv: 'MY_REPOSITORY_KEY',
     baseURL: 'https://gateway.example.test/v1',
     maxTokens: 131_072,
-    retryPolicy: { mode: 'normal', maxRetries: 1 },
+    retryPolicy: {
+      mode: 'normal',
+      maxRetries: 1,
+      backoff: { initialDelayMs: 60_000, maxDelayMs: 60_000, jitterRatio: 0 },
+    },
   });
   assert.equal(rows.find(row => row.id === 'agent-default-model').config.model, 'custom-model-id');
   assert.equal(rows.find(row => row.id === 'web-search-deepseek').config.baseURL, 'https://gateway.example.test/anthropic/v1');
