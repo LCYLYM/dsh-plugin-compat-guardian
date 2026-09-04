@@ -62,6 +62,16 @@ test('blocked repair report shows a sanitized diagnostic without raw model outpu
   assert.match(markdown, /去敏诊断：`Provider connection closed safely`/);
 });
 
+test('blocked verifier report shows its sanitized service diagnostic', () => {
+  const markdown = renderMarkdown({
+    status: 'BLOCKED',
+    candidate: { version: '0.1.2-rc.1' },
+    steps: [{ name: 'stop-real-dsh-web-after-failure', ok: true, durationMs: 10 }],
+    error: { code: 'WEB_EXITED', message: 'dsh web exited', diagnostic: 'missing export resolveSessionPreset' },
+  });
+  assert.match(markdown, /去敏诊断：`missing export resolveSessionPreset`/);
+});
+
 test('pending GitHub release report explains that model repair is not started', () => {
   const markdown = renderMarkdown({
     status: 'WAITING_FOR_NPM_ARTIFACT',

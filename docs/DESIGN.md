@@ -365,6 +365,8 @@ repair DSH 默认可以搜索，不要求每次维修都搜。默认提示词建
 
 默认最多两轮。每轮结束后 agent 只能交付 diff；独立 verifier 从干净副本应用 diff 并重新执行原始合同。
 
+同一次 repair run 的首次独立 verifier 会保存已核对 graph digest 的 candidate `package.json` 和 `pnpm-lock.yaml`，后续 verifier 用 `--frozen-lockfile` 复用这一安装图。这只固定同一维修轮次的测试输入，不跨 run 伪装新上游状态。`dsh web` 若在就绪前退出，verifier 会向报告写入经 Secret/本机路径去敏且截断的诊断；只有这份可行动证据存在时才允许第二轮模型修复，否则立即冻结，避免盲目烧额度。诊断内容始终按不可信数据处理，不允许其覆盖保护路径、验收契约或凭据边界。
+
 `HOST_VERSION_UNSUPPORTED` 且明确来自 `maxHost` 时，第一轮提示词只允许把所选插件 manifest 的 `dsh.compat.maxHost` 更新到候选精确版本，然后立即交给独立 verifier；不要求模型安装依赖、重建或广泛搜索。若完整 candidate gate 随后暴露真实 API 断裂，第二轮才携带该具体失败做源码维修。这样保留 DSH 维修与独立验收边界，同时避免把一个声明式审核边界扩成数百万 token 的全仓库探索。
 
 ## 12. Campaign 预算
