@@ -23,9 +23,11 @@ test('verifier exchanges the DSH launch token for a browser session cookie', asy
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const protocolOutput = `dsh web: ${baseUrl}/?token=fixture-launch-token\n`;
   const service = {
     exited: false,
-    snapshot: () => ({ stdout: `dsh web: ${baseUrl}/?token=fixture-launch-token\n` }),
+    protocolStdout: () => protocolOutput,
+    snapshot: () => ({ stdout: protocolOutput.replace('fixture-launch-token', '[REDACTED]') }),
   };
   try {
     const session = await establishWebSession(baseUrl, service, 2_000);

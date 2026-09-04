@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { objectHash, stableStringify } from '../lib/hash.js';
-import { redactText, runCommand } from '../lib/process.js';
+import { redactText, runCommand, startService } from '../lib/process.js';
 import { runtimeSnapshotIdentity, trackedTreeDigest } from '../lib/verifier.js';
 
 test('stableStringify and objectHash ignore object key insertion order', () => {
@@ -33,6 +33,23 @@ test('command result marks bounded stdout and stderr instead of silently accepti
   assert.equal(result.stderrTruncated, true);
   assert.match(result.stdout, /output truncated/);
   assert.match(result.stderr, /output truncated/);
+});
+
+test('service keeps one-time protocol output transient while snapshots stay redacted', async () => {
+  let announce;
+  const announced = new Promise(resolve => { announce = resolve; });
+  const service = startService(process.execPath, [
+    '-e',
+    'console.log("dsh web: http://127.0.0.1:1234/?token=one-time-token"); setInterval(() => {}, 1000)',
+  ], { onStdout: announce });
+  try {
+    await announced;
+    assert.match(service.protocolStdout(), /token=one-time-token/u);
+    assert.doesNotMatch(service.snapshot().stdout, /one-time-token/u);
+    assert.match(service.snapshot().stdout, /token=\[REDACTED\]/u);
+  } finally {
+    await service.stop();
+  }
 });
 
 test('tracked source digest ignores the machine lock but not plugin source', () => {
