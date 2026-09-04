@@ -115,6 +115,8 @@ The exact latest community run/PR outcomes are recorded in the [final validation
 - A compatibility claim is only as strong as the reviewed plugin-specific smoke contract. A web-shell-only assertion proves boot, not full client behavior.
 - `direct-push` bypasses human review. Use branch protection, CODEOWNERS and strong repository gates before enabling it.
 - Secrets are available only to trusted default-branch repair jobs and explicitly reviewed no-write model-smoke jobs. Ordinary and fork PR code does not receive the key.
+- `node_modules` and npm/pnpm/Yarn caches are immutable deny paths. Guardian checks them before staging and rejects truncated, digest-mismatched, or non-applicable patches.
+- Failure reports show at most a 500-character sanitized stderr diagnostic while retaining error codes, timing, and hashes; full model conversations are not persisted.
 - This project is independent and is not affiliated with DeepSeek. Review the workflow, pinned SHA and permissions before use.
 
 ## Documentation
