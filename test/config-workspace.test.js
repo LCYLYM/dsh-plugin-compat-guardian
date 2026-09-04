@@ -31,6 +31,7 @@ const INVALID_CONFIGS = [
   ['invalid GitHub repository', { watch: { github_repository: 'deepseek-ai' } }],
   ['empty provider', { repair: { provider: '' } }],
   ['numeric model', { repair: { model: 123 } }],
+  ['invalid model output cap', { repair: { max_output_tokens: 0 } }],
   ['relative base URL', { credentials: { base_url: '/v1' } }],
   ['non-http base URL', { credentials: { base_url: 'file:///tmp/api' } }],
   ['numeric base URL', { credentials: { base_url: 42 } }],

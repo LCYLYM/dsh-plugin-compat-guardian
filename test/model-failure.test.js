@@ -22,6 +22,7 @@ const CASES = [
   ['timeout', new GuardianError('MODEL_RESPONSE', 'request timed out'), 'BLOCKED_EXTERNAL', 'MODEL_PROVIDER_TIMEOUT', true],
   ['unreachable URL', new GuardianError('MODEL_RESPONSE', 'fetch failed: ECONNREFUSED'), 'BLOCKED_CONFIG', 'MODEL_PROVIDER_UNREACHABLE', false],
   ['unregistered provider', new GuardianError('MODEL_RESPONSE', 'no adapter registered for provider acme'), 'BLOCKED_CONFIG', 'MODEL_PROVIDER_NOT_REGISTERED', false],
+  ['invalid request cap', new GuardianError('MODEL_RESPONSE', 'INVALID_REQUEST: max_tokens参数非法：限制数值范围[1,131072]'), 'BLOCKED_CONFIG', 'MODEL_REQUEST_INVALID', false],
 ];
 
 for (const [name, error, status, code, retryable] of CASES) {
@@ -40,10 +41,12 @@ test('custom DeepSeek env reference, base URLs, and model are wired into native 
   config.credentials.base_url = 'https://gateway.example.test/v1';
   config.credentials.search_base_url = 'https://gateway.example.test/anthropic/v1';
   config.repair.model = 'custom-model-id';
+  config.repair.max_output_tokens = 131_072;
   const rows = dshRouteRows(config);
   assert.deepEqual(rows.find(row => row.id === 'llm-deepseek').config, {
     apiKeyEnv: 'MY_REPOSITORY_KEY',
     baseURL: 'https://gateway.example.test/v1',
+    maxTokens: 131_072,
     retryPolicy: { mode: 'normal', maxRetries: 1 },
   });
   assert.equal(rows.find(row => row.id === 'agent-default-model').config.model, 'custom-model-id');
