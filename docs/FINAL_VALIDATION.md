@@ -3,7 +3,7 @@
 首次验收日期：2026-08-23
 
 最新回归日期：2026-09-04
-当前 Guardian 核心 SHA：`d7bba2e8431c342e2405ffa170f975955937669b`
+当前 Guardian 核心 SHA：`8d6d81ad584a8d9e2d39b2a7e7eb6a741adfa30c`
 自动修复主链 SHA：`5934767074ff0f0c1d1e7283e50b9cb64e3669c6`
 社区回归验证 SHA：`317e9858dedf2c16c24558b9d448ac7b24190b41`
 模型错误/防循环专项实现 SHA：`4a1ad081cbe04d174f90b559530930fcd8278516`
@@ -15,7 +15,7 @@ rc.1 日志驱动加固 SHA：`3eca47b4d184ab8f6a0217de9f44249558e0b7ea`
 
 ## 结论
 
-V1 核心实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。当前 `0.1.2-rc.1` 四仓回归为 3 仓 PASS 且已产出可合并 PR，Ankh Guard 的插件兼容根因已被精确识别，但指定模型路由连续返回 429，因此本轮四仓总验收仍为 BLOCKED_EXTERNAL，不伪写成四仓全部修复。
+V1 核心实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DSH 自动维修 → 独立复测 → 真实模型/视觉 smoke → PR 或默认分支交付 → 合并后 NOOP 收敛”的主链已在公开 GitHub Actions 真实运行。当前 `0.1.2-rc.1` 四仓回归为 3 仓 PASS 且已产出可合并 PR，Ankh Guard 的插件兼容根因已被精确识别；两个模型路由先后持续返回 429 和明确的服务过载，因此本轮四仓总验收仍为 BLOCKED_EXTERNAL，不伪写成四仓全部修复。
 
 验收不把“已实现可选 adapter”写成“已给外部收件人投递”；本次没有 email/TG/webhook 目标和 publisher PAT，所以这些只有确定性测试或安全等待证据。
 
@@ -36,9 +36,15 @@ V1 核心实现 PASS。“发现 DSH 变化 → 隔离兼容验证 → 真实 DS
 - 没有可行动诊断的 `WEB_EXITED` 不再调用付费 refinement；有诊断时把内容当作不可信错误数据，不允许其改变控制边界。
 - 同一 repair run 后续 verifier 复用首次核验过的 `pnpm-lock.yaml` 并执行 `--frozen-lockfile`，避免两轮之间上游传递依赖变化导致假性 `CANDIDATE_GRAPH_DRIFT`。
 
-本地连续两次完整 Ankh verifier 复现了同一缺失导出；第二次明确使用 `pnpm install --frozen-lockfile`，graph digest 两次均为 `4b940806a9d29c4cc95df154bce012dd5838e4925b8865f88317f406f3abc193`。`npm run check` 为 112/112 PASS。
+本地连续两次完整 Ankh verifier 复现了同一缺失导出；第二次明确使用 `pnpm install --frozen-lockfile`，graph digest 两次均为 `4b940806a9d29c4cc95df154bce012dd5838e4925b8865f88317f406f3abc193`。`npm run check` 为 113/113 PASS。
 
 测试结束后，Ankh 的临时精确 channel 和第三轮恢复额度已撤回，恢复 `latest` 和默认两轮限制。四仓 Guardian workflow 均为 `disabled_manually`；本轮最高的官方 Release `dsh-v0.1.3-alpha.1` 尚无对应 NPM 制品时，[run 33869709973](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33869709973) 正确停在 `WAITING_FOR_NPM_ARTIFACT`，未调用模型。
+
+### Ankh 服务过载退避验证
+
+[run 33875615285](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33875615285) 使用 `qwen3.8-flash` 和第二条 OpenAI-compatible 路由真实执行：机械 verifier 用时 2m29s，确认目标仍因 `resolveSessionPreset` 缺失而不兼容；repair DSH 的 provider 连续报告 `system cpu overloaded`。主模型命令用时 246.23s，符合“首请求 + 两次固定两分钟退避”的上限，repair job 总计 4m32s。Guardian 最终稳定归类为 `MODEL_PROVIDER_5XX / BLOCKED_EXTERNAL`，写入 epoch 5 状态 PR；没有产出未经独立 verifier 通过的代码维修 PR。
+
+该次外部错误没有消费完成的模型维修轮次或 token 记账，`automatic_repair_used=false`、`attempts_used=0`；状态 PR 已合并以冻结 schedule。测试结束后仓库恢复 `latest` 与默认两轮限制，workflow 为 `disabled_manually`。
 
 ## 官方 Release `0.1.2-rc.1` 回归与日志加固（2026-09-03 至 2026-09-04）
 
@@ -73,6 +79,8 @@ Guardian 已改为以官方 `dsh-v*` GitHub Release 为更新信号，并要求�
 | 不可达 URL | 真实 rc.2 连接已关闭的本地端口 | `MODEL_PROVIDER_UNREACHABLE / BLOCKED_CONFIG` |
 | 未注册 provider | 真实 rc.2 在发起 HTTP 前拒绝，端点 0 请求 | `MODEL_PROVIDER_NOT_REGISTERED / BLOCKED_CONFIG` |
 | repair 401 全路径 | 真实 repair DSH 命中 401 | blocked lock 为 `BLOCKED_CONFIG`，`automaticRepairUsed=false`，`attemptsUsed=0` |
+
+上表保留 2026-08-22 当时的一分钟/一次 retry 实测。当前策略已由 [run 33875615285](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/33875615285) 验证为固定两分钟退避、最多再试两次，并新增对 provider 明确过载文本的稳定分类。
 
 另有确定性证据证明：缺 Key 的 repair 和 model smoke 都生成 blocked lock；非法/relative/numeric URL、空 provider、非字符串 model、非法 env 名会在 DSH 启动前拒绝；repair 前同时检查 state/repair 分支；仅持久化 blocked lock 的 push 因输入指纹未变而冻结；model smoke 失败不会推进 `verified`。
 
