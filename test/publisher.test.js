@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import { sha256 } from '../lib/hash.js';
-import { validateRepairPatch } from '../lib/publisher.js';
+import { assertPublicationPaths, validateRepairPatch } from '../lib/publisher.js';
 
 test('direct push treats the campaign issue as optional but keeps git publication strict', async () => {
   const source = await readFile(new URL('../lib/publisher.js', import.meta.url), 'utf8');
@@ -24,5 +24,21 @@ test('publisher rejects truncated or tampered repair artifacts before git apply'
   assert.throws(
     () => validateRepairPatch({ repair: { patchSha256: sha256(patch) } }, `${patch}tampered`),
     { code: 'PUBLISH_PATCH_DIGEST_MISMATCH' },
+  );
+});
+
+test('publisher allows only its managed lock after separately validating the repair patch', () => {
+  const protectedPaths = ['.dsh-compat.lock.json', '.dsh-compat.yml', '.github/workflows/**'];
+  assert.doesNotThrow(() => assertPublicationPaths(['package.json'], protectedPaths));
+  assert.throws(
+    () => assertPublicationPaths(['.dsh-compat.lock.json'], protectedPaths),
+    { code: 'PROTECTED_PATH_CHANGED' },
+  );
+  assert.doesNotThrow(
+    () => assertPublicationPaths(['package.json', '.dsh-compat.lock.json'], protectedPaths, true),
+  );
+  assert.throws(
+    () => assertPublicationPaths(['.dsh-compat.yml', '.dsh-compat.lock.json'], protectedPaths, true),
+    { code: 'PROTECTED_PATH_CHANGED' },
   );
 });
