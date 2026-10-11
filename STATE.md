@@ -4,14 +4,16 @@
 
 | ID | 用户要求与出处 | 验收 | 当前状态 |
 | --- | --- | --- | --- |
-| ANNA-01 | 2026-10-12：五个现有消费者换为 Anna 接口、`auto`、`high/xhigh`，不用视觉模型 | 远端配置和 Secret 读回；原生 DSH 真实文字/工具调用；真实更新流程 | 五仓库配置已部署；使用原生适配器支持的 `high`。接口真实 200；首轮工作流暴露旧 DSH HMR 依赖和新 Session 协议问题，尚未通过最终验收 |
-| OPT-01 | 同日追加：优化一版，部署、测试并交付 | 优化接入原更新流程；最终部署 SHA 的独立 verifier 和实际消费者证据 | 进行中；先修复实际启动/协议缺口 |
+| ANNA-01 | 2026-10-12：五个现有消费者换为 Anna 接口、`auto`、`high/xhigh`，不用视觉模型 | 远端配置和 Secret 读回；原生 DSH 真实文字/工具调用；真实更新流程 | 五仓库配置已部署；使用原生适配器支持的 `high`。原生新版 DSH 的真实文本/工具/completed turn PASS；无图片。fixture PASS；Web UI 与 Whale 补丁 PASS、PR 待审阅；Office/Ankh 原额度耗尽 BLOCKED，五仓库全升级目标 PARTIAL |
+| OPT-01 | 同日追加：优化一版，部署、测试并交付 | 优化接入原更新流程；最终部署 SHA 的独立 verifier 和实际消费者证据 | 引擎已合并并部署 b355b6ec43fbe51ef0a8c33d0a3383f653bfb0af；134/134 单测；真实消费者验证分开列示，见 docs/ANNA_UPGRADE_VALIDATION.md |
 | GUIDE-01 | 同日追加：参考 oh-my-dsh/dsh-plugin-upgrade-skill 完善设计 | 版本限定、有源可查的升级依据进入维修；覆盖缺口可见；不替代 verifier | 固定 revision `ef075767b476e8000c716a18f848028eebcd5aef`。采用精确目标来源/声明、精准失败证据和版本限定；卡片自动注入未证明收益，生产默认关闭 |
-| ABLATE-01 | 同日追加：消融实验，防止过度设计 | 同输入、模型、预算的对照；报告成功率、修改范围、消耗、失败与覆盖限制；无收益部分不部署 | 四组 HMR 对照仅组合方案 3/3，其余 0/3；Whale 指导组真实升级 PASS，control HTTP 502，外部因素和更高 token 消耗使指导收益无法归因；中止原型保留 FAIL。详见 docs/ANNA_UPGRADE_VALIDATION.md |
+| ABLATE-01 | 同日追加：消融实验，防止过度设计 | 同输入、模型、预算的对照；报告成功率、修改范围、消耗、失败与覆盖限制；无收益部分不部署 | 四组 HMR 对照仅组合方案 3/3，其余 0/3；Whale 指导组真实升级 PASS，control HTTP 502，外部因素和更高 token 消耗使指导收益无法归因；中止原型保留 FAIL；原生 SDK 运行中止损 control 3300 tokens 完成，1024-token 实验监测组读到1611后中止，保留超额事实。详见 docs/ANNA_UPGRADE_VALIDATION.md |
 
 首轮真实 run：Ankh `38154381818`、Whale `38154391929`、Office `38154406435`、Web UI `38154518230`、fixture `38154416026`。五仓库已部署 `auto` / `high` / `https://ai.anna.tf/v1`，搜索关闭，模型 smoke 使用纯文字。Guardian 原生 reasoning 支持已合并为 PR #20，消费者 pin 为 `055b40a393c0bf131d8ccc0df51107510ad83fba`；114 项单测通过。旧 runner 的 HMR `1.0.19` 缺少旧 DSH 所需的 `registerConfig`；新候选的 Session 认证、RPC 参数与事件流需独立适配。保持失败事实，未将机械通过冒充模型/更新成功。
 
-日期：2026-09-04
+当前最终引擎 pin 为 `b355b6ec43fbe51ef0a8c33d0a3383f653bfb0af`，五个 workflow active；Office 用量 5,355,737、Ankh 用量 6,173,710，均保留原 4,000,000 上限和旧 verified，冻结同版本自动维修。Web UI PR #9、Whale PR #12 需人工审阅。生产自动注入指导卡片仍关闭。
+
+## 历史验证记录（截至 2026-09-04）
 
 项目阶段：V1 实现完成，主链路已在公开仓库真实验证。默认交付人工审核 PR；`auto-merge` 和 `direct-push` 需仓库显式开启。
 
@@ -38,7 +40,7 @@
 - Actions Summary 每次生成；campaign Issue、email、Telegram 和 webhook 按稳定 event ID 去重，NOOP 不发外部通知。
 - `BLOCKED_EXTERNAL`、`BLOCKED_CONTRACT`、`STALE_SOURCE`、`SUPERSEDED`、旧合并分支清理和 contract-only PR 路径均已实现。
 - 缺 Key/401/403/错误 model、base URL 或 provider 持久化为 `BLOCKED_CONFIG`；429/5xx/timeout/明确过载由 DSH provider 每两分钟自动重试一次、最多再试两次后持久化为 `BLOCKED_EXTERNAL`。
-- repair/model smoke 在调模型前同时检查 state 与维修分支；仅合并失败 lock 造成的 push 不会触发相同输入再跑。
+- repair/model smoke 在调模型前只读核对同目标 open state 与维修 PR；已合并的保留分支不阻塞，仅合并失败 lock 造成的 push 不会触发相同输入再跑。
 - 模型 smoke 失败保留上一个真正 verified，不会把“只过了机械 gate”的 candidate 误写成已兼容。
 - 真实 `@deepseek-ai/dsh@0.1.1-rc.2` 本地 HTTP 探针已证明自定义 URL、Bearer Key、model 均到达原生 `/chat/completions`；401/错 model/404/429/503/timeout 分类与重试上限符合预期。
 

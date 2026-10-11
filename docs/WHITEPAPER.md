@@ -2,7 +2,7 @@
 
 版本：0.1-draft
 日期：2026-08-21
-状态：设计已冻结，M0 本地真实验证 PASS，M1 公开 Actions 待执行
+状态：核心更新链路已在公开 Actions 验证；2026-10 Anna 部署与消融结果见 ANNA_UPGRADE_VALIDATION.md。消费者升级结果分别报告，预算耗尽不计成功。
 
 ## 摘要
 
@@ -220,7 +220,7 @@ V1 不建设临时 key 代理，因此 candidate smoke 进程在该独立 step �
 
 publisher 在发布前重新读取默认分支 SHA。若源码变化，旧结果是 `STALE_SOURCE`，禁止推送。PR 等待期间 latest 变化，旧 PR 标为 `SUPERSEDED` 并关闭，新版本从当前默认分支新开 PR；不 force-push 旧证据。
 
-每次 repair/model smoke 调模型前还会检查同目标的 `automation/dsh-compat/state/<version>` 和 `automation/dsh-compat/<version>`。任一分支尚未合并都直接冻结，因此“维修 PR 在等人审核”不会被六小时 schedule 当成新维修。
+每次 repair/model smoke 调模型前还会只读查询同目标的 `automation/dsh-compat/state/<version>` 和 `automation/dsh-compat/<version>` 是否存在 open PR。任一 PR 等待审核都直接冻结，因此“维修 PR 在等人审核”不会被六小时 schedule 当成新维修；已合并后保留的分支不算待审核。
 
 每个目标最终只交付一个整理后的 bot commit。失败轮次不塞入 Git 历史，只留在 PR/Issue 评论和短期脱敏 artifact。
 

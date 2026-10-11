@@ -19,9 +19,9 @@ Run this from a clean plugin repository with Node 24 and an authenticated `gh` C
 
 ```bash
 npm exec --yes \
-  --package=github:LCYLYM/dsh-plugin-compat-guardian#3de35600566ad1f4ff318e2de3d99de48b6ec72a \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#b355b6ec43fbe51ef0a8c33d0a3383f653bfb0af \
   -- dsh-plugin-compat-guardian onboard \
-  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@3de35600566ad1f4ff318e2de3d99de48b6ec72a
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@b355b6ec43fbe51ef0a8c33d0a3383f653bfb0af
 ```
 
 The command opens one onboarding PR; it does not modify the default branch directly. Review the generated config, plugin-specific smoke contract, and immutable 40-character Guardian SHA. Then configure the repository:
