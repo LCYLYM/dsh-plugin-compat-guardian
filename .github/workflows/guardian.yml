@@ -198,7 +198,7 @@ jobs:
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
-          state_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/state/$safe_version" --json number --jq length)
+          state_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json headRefName --jq "[.[] | select(.headRefName == \"automation/dsh-compat/state/$safe_version\" or (.headRefName | startswith(\"automation/dsh-compat/state/$safe_version/\")))] | length")
           repair_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/$safe_version" --json number --jq length)
           if [[ "$state_pending" -gt 0 || "$repair_pending" -gt 0 ]]; then
             echo 'pending=true' >> "$GITHUB_OUTPUT"
@@ -335,8 +335,12 @@ jobs:
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
           branch="automation/dsh-compat/state/$safe_version"
           if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
-            echo "model-smoke state already waits on $branch"
-            exit 0
+            pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --json number --jq length)
+            if [[ "$pending" -gt 0 ]]; then
+              echo "model-smoke state already waits on $branch"
+              exit 0
+            fi
+            branch="$branch/$GITHUB_RUN_ID"
           fi
           cp ../model-smoke-evidence/blocked-lock.json .dsh-compat.lock.json
           git config user.name 'dsh-compat-guardian[bot]'
@@ -413,7 +417,7 @@ jobs:
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
           state_branch="automation/dsh-compat/state/$safe_version"
           repair_branch="automation/dsh-compat/$safe_version"
-          state_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/state/$safe_version" --json number --jq length)
+          state_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json headRefName --jq "[.[] | select(.headRefName == \"automation/dsh-compat/state/$safe_version\" or (.headRefName | startswith(\"automation/dsh-compat/state/$safe_version/\")))] | length")
           repair_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/$safe_version" --json number --jq length)
           if [[ "$state_pending" -gt 0 || "$repair_pending" -gt 0 ]]; then
             echo 'pending=true' >> "$GITHUB_OUTPUT"
@@ -597,8 +601,12 @@ jobs:
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
           branch="automation/dsh-compat/state/$safe_version"
           if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
-            echo "blocked campaign state already waits on $branch"
-            exit 0
+            pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --json number --jq length)
+            if [[ "$pending" -gt 0 ]]; then
+              echo "blocked campaign state already waits on $branch"
+              exit 0
+            fi
+            branch="$branch/$GITHUB_RUN_ID"
           fi
           cp ../repair-evidence/blocked-lock.json .dsh-compat.lock.json
           git config user.name 'dsh-compat-guardian[bot]'
