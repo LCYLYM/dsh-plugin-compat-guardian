@@ -152,6 +152,7 @@ jobs:
     timeout-minutes: 75
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       status: ${{ steps.model-smoke.outputs.status }}
     steps:
@@ -193,11 +194,13 @@ jobs:
       - name: Check for an unmerged campaign-state publication
         id: pending-model-state
         env:
+          GH_TOKEN: ${{ github.token }}
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
-          if git -C target ls-remote --exit-code --heads origin "refs/heads/automation/dsh-compat/state/$safe_version" >/dev/null 2>&1 \
-            || git -C target ls-remote --exit-code --heads origin "refs/heads/automation/dsh-compat/$safe_version" >/dev/null 2>&1; then
+          state_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/state/$safe_version" --json number --jq length)
+          repair_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/$safe_version" --json number --jq length)
+          if [[ "$state_pending" -gt 0 || "$repair_pending" -gt 0 ]]; then
             echo 'pending=true' >> "$GITHUB_OUTPUT"
           else
             echo 'pending=false' >> "$GITHUB_OUTPUT"
@@ -357,6 +360,7 @@ jobs:
     timeout-minutes: 75
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       status: ${{ steps.repair.outputs.status }}
       error_code: ${{ steps.repair.outputs.error_code }}
@@ -402,13 +406,15 @@ jobs:
       - name: Check for an unmerged state or repair publication
         id: pending
         env:
+          GH_TOKEN: ${{ github.token }}
           CANDIDATE_VERSION: ${{ needs.verify.outputs.candidate_version }}
         run: |
           safe_version=${CANDIDATE_VERSION//[^A-Za-z0-9._-]/-}
           state_branch="automation/dsh-compat/state/$safe_version"
           repair_branch="automation/dsh-compat/$safe_version"
-          if git -C target ls-remote --exit-code --heads origin "refs/heads/$state_branch" >/dev/null 2>&1 \
-            || git -C target ls-remote --exit-code --heads origin "refs/heads/$repair_branch" >/dev/null 2>&1; then
+          state_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/state/$safe_version" --json number --jq length)
+          repair_pending=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "automation/dsh-compat/$safe_version" --json number --jq length)
+          if [[ "$state_pending" -gt 0 || "$repair_pending" -gt 0 ]]; then
             echo 'pending=true' >> "$GITHUB_OUTPUT"
           else
             echo 'pending=false' >> "$GITHUB_OUTPUT"

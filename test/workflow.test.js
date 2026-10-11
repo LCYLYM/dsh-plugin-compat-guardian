@@ -67,11 +67,15 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
       assert.match(step.run, /set -o pipefail/, `${jobName} must preserve the producer exit status`);
     }
   }
-  assert.match(source, /refs\/heads\/automation\/dsh-compat\/\$safe_version/);
   const repairPending = workflow.jobs.repair.steps.find(step => step.id === 'pending');
   assert.match(repairPending.run, /state_branch=.*state\/\$safe_version/);
   assert.match(repairPending.run, /repair_branch=.*compat\/\$safe_version/);
-  assert.match(repairPending.run, /refs\/heads\/\$repair_branch/);
+  assert.match(repairPending.run, /gh pr list.*--state open/);
+  assert.doesNotMatch(repairPending.run, /ls-remote/);
+  assert.equal(workflow.jobs.repair.permissions['pull-requests'], 'read');
+  assert.equal(workflow.jobs['candidate-model-smoke'].permissions['pull-requests'], 'read');
+  assert.match(workflow.jobs['candidate-model-smoke'].steps.find(step => step.id === 'pending-model-state').run, /gh pr list.*--state open/);
+  assert.doesNotMatch(workflow.jobs['candidate-model-smoke'].steps.find(step => step.id === 'pending-model-state').run, /ls-remote/);
   const notifySteps = workflow.jobs.notify.steps;
   assert.match(notifySteps.find(step => step.name === 'Download repair report when one exists').if, /needs\.repair\.result.*skipped/);
   assert.match(notifySteps.find(step => step.name === 'Download candidate model-smoke report when one exists').if, /needs\.candidate-model-smoke\.result.*skipped/);
