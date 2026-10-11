@@ -6,7 +6,15 @@ import test from 'node:test';
 
 import { stringify } from 'yaml';
 
-import { finalText, modelSmokeWebArgs, resolveModelFixtures, runCandidateModelSmoke } from '../lib/model-smoke.js';
+import { finalText, modelSmokeWebArgs, requireCompletedTurn, resolveModelFixtures, runCandidateModelSmoke } from '../lib/model-smoke.js';
+
+test('a terminal event is successful only when the real turn completed', () => {
+  assert.equal(requireCompletedTurn({ data: { reason: { kind: 'completed' } } }), 'completed');
+  for (const terminal of [undefined, { data: {} }, { data: { reason: { kind: 'cancelled' } } },
+    { data: { reason: { kind: 'error', message: 'unknown native error' } } }]) {
+    assert.throws(() => requireCompletedTurn(terminal), { code: 'MODEL_SMOKE_TURN_INCOMPLETE' });
+  }
+});
 
 test('model smoke starts the web profile directly without a legacy web subcommand', () => {
   assert.deepEqual(modelSmokeWebArgs('web', '/tmp/overlay.yml', 4321), [
