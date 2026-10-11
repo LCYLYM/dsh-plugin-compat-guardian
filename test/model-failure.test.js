@@ -47,6 +47,7 @@ test('custom DeepSeek env reference, base URLs, and model are wired into native 
   assert.deepEqual(rows.find(row => row.id === 'llm-deepseek').config, {
     apiKeyEnv: 'MY_REPOSITORY_KEY',
     baseURL: 'https://gateway.example.test/v1',
+    reasoningEffort: 'high',
     maxTokens: 131_072,
     retryPolicy: {
       mode: 'normal',

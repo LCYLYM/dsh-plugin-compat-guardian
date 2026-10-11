@@ -32,6 +32,7 @@ const INVALID_CONFIGS = [
   ['empty provider', { repair: { provider: '' } }],
   ['numeric model', { repair: { model: 123 } }],
   ['invalid model output cap', { repair: { max_output_tokens: 0 } }],
+  ['unsupported reasoning effort', { repair: { reasoning_effort: 'xhigh' } }],
   ['relative base URL', { credentials: { base_url: '/v1' } }],
   ['non-http base URL', { credentials: { base_url: 'file:///tmp/api' } }],
   ['numeric base URL', { credentials: { base_url: 42 } }],
