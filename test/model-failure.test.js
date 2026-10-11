@@ -24,6 +24,7 @@ const CASES = [
   ['unreachable URL', new GuardianError('MODEL_RESPONSE', 'fetch failed: ECONNREFUSED'), 'BLOCKED_CONFIG', 'MODEL_PROVIDER_UNREACHABLE', false],
   ['unregistered provider', new GuardianError('MODEL_RESPONSE', 'no adapter registered for provider acme'), 'BLOCKED_CONFIG', 'MODEL_PROVIDER_NOT_REGISTERED', false],
   ['invalid request cap', new GuardianError('MODEL_RESPONSE', 'INVALID_REQUEST: max_tokens参数非法：限制数值范围[1,131072]'), 'BLOCKED_CONFIG', 'MODEL_REQUEST_INVALID', false],
+  ['terminal request cap', new GuardianError('MODEL_PROVIDER_RESPONSE', JSON.stringify({ reason: { error: { message: 'max_tokens exceeds the limit of 65536', code: 'INVALID_REQUEST', status: 400 } } })), 'BLOCKED_CONFIG', 'MODEL_REQUEST_INVALID', false],
 ];
 
 for (const [name, error, status, code, retryable] of CASES) {
@@ -35,6 +36,12 @@ for (const [name, error, status, code, retryable] of CASES) {
     assert.doesNotMatch(result.message, /wrong-model|acme|ECONNREFUSED/);
   });
 }
+
+test('a previously classified provider error retains its recovery status', () => {
+  for (const code of ['MODEL_NOT_FOUND', 'MODEL_REQUEST_INVALID', 'MODEL_CREDENTIAL_REJECTED']) {
+    assert.equal(classifyModelFailure(new GuardianError(code, '已去敏的中文错误')).status, 'BLOCKED_CONFIG');
+  }
+});
 
 test('custom DeepSeek env reference, base URLs, and model are wired into native DSH rows', () => {
   const config = structuredClone(DEFAULT_CONFIG);
@@ -48,6 +55,7 @@ test('custom DeepSeek env reference, base URLs, and model are wired into native 
     apiKeyEnv: 'MY_REPOSITORY_KEY',
     baseURL: 'https://gateway.example.test/v1',
     reasoningEffort: 'high',
+    models: [{ id: 'custom-model-id', inputModalities: ['text'] }],
     maxTokens: 131_072,
     retryPolicy: {
       mode: 'normal',
@@ -57,7 +65,9 @@ test('custom DeepSeek env reference, base URLs, and model are wired into native 
   });
   assert.equal(rows.find(row => row.id === 'agent-default-model').config.model, 'custom-model-id');
   assert.equal(rows.find(row => row.id === 'web-search-deepseek').config.baseURL, 'https://gateway.example.test/anthropic/v1');
-  const env = dshRouteEnvironment(config, 'test-secret', {});
+  const env = dshRouteEnvironment(config, 'test-secret', { GITHUB_TOKEN: 'read-token', GH_TOKEN: 'write-token' });
+  assert.equal(env.GITHUB_TOKEN, undefined);
+  assert.equal(env.GH_TOKEN, undefined);
   assert.equal(env.MY_REPOSITORY_KEY, 'test-secret');
   assert.equal(env.DEEPSEEK_API_KEY, 'test-secret');
   assert.equal(env.DEEPSEEK_BASE_URL, 'https://gateway.example.test/v1');

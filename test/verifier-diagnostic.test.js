@@ -21,3 +21,12 @@ test('service diagnostics are absent when the process produced no useful output'
   assert.equal(sanitizedVerifierDiagnostic({ stderr: '', stdout: '' }), undefined);
   assert.equal(sanitizedVerifierDiagnostic(undefined), undefined);
 });
+
+test('wrapped command failures retain the native compatibility rejection for refinement', () => {
+  const diagnostic = sanitizedVerifierDiagnostic({ result: {
+    stderr: 'installation rejected: Plugin fixture is incompatible: peerDependencies api_key=private-value',
+    stdout: 'download completed',
+  } });
+  assert.match(diagnostic, /installation rejected.*peerDependencies/);
+  assert.doesNotMatch(diagnostic, /private-value/);
+});

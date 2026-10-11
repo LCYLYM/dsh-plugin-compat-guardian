@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-compat-guardian",
-  "version": "0.1.0-dev.0",
+  "version": "0.1.1-dev.0",
   "description": "Repository-installed compatibility verifier and repair orchestrator for DeepSeek Harness plugins",
   "type": "module",
   "private": true,
@@ -10,6 +10,7 @@
   "files": [
     "bin",
     "lib",
+    "data/migration-guidance",
     "templates",
     "README.md",
     "LICENSE"
@@ -25,6 +26,7 @@
   },
   "dependencies": {
     "semver": "^7.7.2",
+    "ws": "^8.18.3",
     "yaml": "^2.8.1"
   },
   "license": "MIT"
