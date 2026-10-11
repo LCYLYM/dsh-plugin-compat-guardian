@@ -4,7 +4,6 @@ import { delimiter, join } from 'node:path';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
 import { stringify } from 'yaml';
-import { dshRunnerManifest } from '../lib/dsh-runner.js';
 import { runCommand, startService } from '../lib/process.js';
 import { establishWebSession } from '../lib/verifier.js';
 
@@ -16,7 +15,9 @@ const results = [];
 for (const arm of ['control', 'compatible-released-hmr', 'preinitialized-hmr', 'compatible-preinitialized-hmr']) {
   const runner = join(root, arm, 'runner');
   await mkdir(runner, { recursive: true });
-  await writeFile(join(runner, 'package.json'), `${JSON.stringify(arm.startsWith('compatible') ? dshRunnerManifest(version) : { private: true })}\n`);
+  await writeFile(join(runner, 'package.json'), `${JSON.stringify(arm.startsWith('compatible')
+    ? { private: true, pnpm: { overrides: { '@deepseek-ai/cordis-plugin-hmr': '1.0.17' } } }
+    : { private: true })}\n`);
   const installed = await access(join(runner, 'node_modules', '.bin', 'dsh')).then(() => true, () => false);
   if (!installed) await runCommand('pnpm', ['add', '--save-exact', `@deepseek-ai/dsh@${version}`], {
     cwd: runner, env: { ...process.env, CI: 'true' }, timeoutMs: 720_000,

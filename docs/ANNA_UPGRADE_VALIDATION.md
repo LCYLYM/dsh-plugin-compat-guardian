@@ -51,3 +51,5 @@ fixture 的真实文本 smoke PASS：`user/message`、`tool/call`、`tool/result
 ## 最终部署与消费者
 
 尚待记录最终不可变引擎 SHA、五个远端 run、真实维修 diff、发布 PR 和未满足项。单测或 fixture 成功不替代消费者验证。
+
+首轮部署到 `30d36cca20d9c9b6931321cbd036415eff9d50e7` 后发现两个前置缺口：Web UI 的实际旧基线是 `0.1.2-rc.1`；该版重复相同四组启动消融，control / pin / preload 各 0/3，combined 3/3，因此仅扩展到这个实际测过的版本。Ankh 与 fixture 的已合并状态分支被错误当成待合并 PR，实际调用被冻结；改为用只读 GitHub API 核对 open PR，不删除历史分支，也不放行真正待合并的 PR。

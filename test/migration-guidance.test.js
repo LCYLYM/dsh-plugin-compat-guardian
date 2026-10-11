@@ -33,6 +33,8 @@ test('maxHost-only first attempt does not pay for migration context', () => {
 test('measured legacy runner workaround leaves every other cohort untouched', () => {
   assert.equal(dshRunnerManifest('0.1.1-rc.2').pnpm.overrides['@deepseek-ai/cordis-plugin-hmr'], '1.0.17');
   assert.equal(dshRunnerPatches('0.1.1-rc.2')[0].insert[0].name, '@deepseek-ai/cordis-plugin-hmr');
+  assert.equal(dshRunnerManifest('0.1.2-rc.1').pnpm.overrides['@deepseek-ai/cordis-plugin-hmr'], '1.0.17');
+  assert.equal(dshRunnerPatches('0.1.2-rc.1')[0].insert[0].name, '@deepseek-ai/cordis-plugin-hmr');
   assert.deepEqual(dshRunnerManifest('0.2.1-alpha.2'), { private: true });
   assert.deepEqual(dshRunnerPatches('0.2.1-alpha.2'), []);
 });
