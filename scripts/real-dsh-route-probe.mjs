@@ -81,6 +81,7 @@ try {
   assert.equal(requests[0].url, '/chat/completions');
   assert.equal(requests[0].authorization, 'Bearer guardian-route-secret');
   assert.equal(JSON.parse(requests[0].body).model, 'guardian-custom-model');
+  assert.equal(JSON.parse(requests[0].body).reasoning_effort, 'high');
 
   const observed = [];
   for (const status of [401, 'bad-model', 'not-found', 429, 503, 'timeout']) {
