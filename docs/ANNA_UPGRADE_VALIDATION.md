@@ -50,8 +50,28 @@ fixture 的真实文本 smoke PASS：`user/message`、`tool/call`、`tool/result
 
 ## 最终部署与消费者
 
-尚待记录最终不可变引擎 SHA、五个远端 run、真实维修 diff、发布 PR 和未满足项。单测或 fixture 成功不替代消费者验证。
+最终执行版本为 `ec5e76805e563725e2d155391ff6732c02b4c8b9`，由引擎 PR #21 / #22 / #23 合并组成；五个消费者的 workflow 都已读回相同 pin。单测或 fixture 成功不替代消费者验证。
 
 首轮部署到 `30d36cca20d9c9b6931321cbd036415eff9d50e7` 后发现两个前置缺口：Web UI 的实际旧基线是 `0.1.2-rc.1`；该版重复相同四组启动消融，control / pin / preload 各 0/3，combined 3/3，因此仅扩展到这个实际测过的版本。Ankh 与 fixture 的已合并状态分支被错误当成待合并 PR，实际调用被冻结；改为用只读 GitHub API 核对 open PR，不删除历史分支，也不放行真正待合并的 PR。
 
 模型 smoke 还必须检查真实 `turn/end.data.reason.kind === completed`：未知失败或中断后的部分回复不能 PASS。增补一项单测后 129/129 通过；真实候选 SDK / Anna auto/high / 文本工具回合在这个严格门槛下再次 PASS，6,119 已报告 tokens、`terminalReason=completed`、`imageObserved=false`。历史部署的通过报告不补写该字段。
+
+| 消费者 | 实际证据 | 当前结论 |
+| --- | --- | --- |
+| fixture | [严格门槛 run 38161747136](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38161747136)，机械与模型 PASS，`auto/high`、`completed`、无图片、当次 4,690 tokens；[PR #30](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/pull/30) 只更新验证账本并已合并；[收敛 run 38162100649](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38162100649) 为 NOOP，模型/repair/publish 全 skipped | PASS / OBSERVED |
+| Web UI | [实际升级 run 38161203336](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38161203336)：32,359 tokens，仅 skill-explorer package.json 一行 maxHost 变更，原测试/构建/安装/Web smoke/卸载独立 PASS；[PR #9](https://github.com/LCYLYM/dsh-web-ui/pull/9) 等待审阅；最终引擎 [run 38161746094](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38161746094) 正确 FROZEN，未重复调用模型 | 升级补丁 PASS / OBSERVED；默认分支尚未合入插件补丁 |
+| Ankh | 实际修复 run `38161199614`；最终 pin 排队复测 `38161742105` 已取消，避免旧预算未落盘时再付费调用 | 尚待实际结果 |
+| Whale | [实际修复 run 38160738314](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38160738314) 的模型修复与独立 verifier PASS，2 轮、3,062,505 tokens，仅 maxHost / DSH peer-dev 范围 / pnpm-lock；最后推送分支 FAIL。原补丁在当前默认分支上重放，经最终引擎真实复验（macOS ARM64）PASS，再经正常 publisher 成功发布 [PR #12](https://github.com/LCYLYM/dsh-whale-report/pull/12)，没有新增模型调用；[最终去重 run 38163687040](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38163687040) 正确冻结于该 open PR | 补丁 PASS / OBSERVED；原 Actions 发布 FAIL 事实保留，发布已恢复；待人工审阅 |
+| Office | [真实 run 38160740018](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/38160740018) 第 2 轮独立 verifier PASS，但累计 5,355,737 tokens 超过原 4,000,000 额度，最终 `BUDGET_EXHAUSTED`，未交付补丁；账本发布又被 GitHub App 的 workflow 权限拒绝。[状态 PR #11](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/pull/11) 在当前默认分支保存原失败账本并合并，保留旧 verified、完整用量与历史，不重置额度 | BLOCKED / OBSERVED，不能记作升级成功 |
+
+所有限额未增加。Anna `auto` 的实际费率未提供、也不匹配内置官方价格表；CNY 为未知，不能把原 `max_cny` 描述为账户账单级硬限。当前交付默认仍是人工审阅 PR，而不是无人审核合并社区插件源码。
+
+Whale 新 peer 范围为 `^0.2.1-alpha.2`、dev 依赖固定该版；目标新版通过不代表修改后的全部旧版兼容。恢复 PR 保留原模型 campaign 的 3,062,505 tokens / 2 次机会，没有丢弃失败账本或伪造一个更便宜的全新 campaign。原 GitHub 推送失败的 CLI 未输出 stderr，仅观察到 exit 1，具体拒绝原因未证实；没有因此扩张 Actions 权限、force-push 或重做模型维修。
+
+## 运行中预算止损
+
+Office 暴露原有预算检查在完整模型轮次结束后才进行，不能及时中止长轮次。新增仅观察已有 DSH JSONL 用量账本的 1 秒监测；达到已报告额度时终止该 CLI 进程组，读账本失败也停止，墙钟超限保持 `BUDGET_EXHAUSTED` 而不是假报供应商超时。不增加代理服务器、后台服务或消费者配置开关。
+
+同 SDK `0.2.1-alpha.2`、同 Anna `auto/high`、同只读 bash + sleep 12 秒任务、独立 home 的真实消融：control 正常完成，29.602 秒、3,300 tokens；监测组的实验阈值为 1,024，读到 1,611 tokens 后中止，11.135 秒、`aborted=true`、回合未完成，未再进行后续正常回合。实验没有改动消费者额度。一次请求会在报告用量前产生费用，因此 587-token 超出实验阈值的事实保留；不是供应商账单硬限，也不伪造逐请求零超额保证。134/134 单测通过，另保留最终检查。
+
+Office 发布日志确认为 `refusing to allow a GitHub App to create or update workflow ... without workflows permission`：维修期间控制 workflow 已更新，旧发布分支仍携带旧 workflow。发布/维修发布/失败账本发布将先 checkout 当前默认分支，再用原 source SHA 核对；不一致时明确 `STALE_SOURCE`，不尝试推旧 workflow、不扩张权限，也不自动重做模型任务。Whale 的原 stderr 没有输出，不能将 Office 的精确拒绝原因冒充为 Whale 的已证实原因。

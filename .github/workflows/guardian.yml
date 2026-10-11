@@ -248,10 +248,11 @@ jobs:
       issues: write
     steps:
       # actions/checkout v7.0.1, pinned 2026-08-22. Only this job receives write credentials.
-      - name: Check out exact source for publication
+      - name: Check out current default branch for publication
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: target
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: true
           token: ${{ secrets.publisher_token || github.token }}
 
@@ -462,10 +463,11 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Check out exact failed source for publication
+      - name: Check out current default branch for repair publication
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: target
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: true
           token: ${{ secrets.publisher_token || github.token }}
 
@@ -567,10 +569,11 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Check out exact failed source for state publication
+      - name: Check out current default branch for state publication
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: target
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: true
 
       - name: Download blocked repair evidence
