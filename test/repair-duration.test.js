@@ -146,6 +146,16 @@ test('a successful first call cannot hide a started failed refinement from the r
     { status: 'BLOCKED_EXTERNAL', modelAttempted: true, modelAttempts: 2 }), 1);
 });
 
+test('reported usage retains started attempts even when the terminal failure is external', () => {
+  const steps = [{ name: 'run-repair-dsh', ok: true }, { name: 'run-repair-refinement', ok: false }];
+  assert.equal(consumedRepairAttempts(steps,
+    { status: 'BLOCKED_EXTERNAL', modelAttempted: true, modelAttempts: 2, reportedTokens: 5830703 }), 2);
+  assert.equal(consumedRepairAttempts(steps,
+    { status: 'BLOCKED_EXTERNAL', modelAttempted: true, modelAttempts: 2, reportedTokens: 0 }), 1);
+  assert.equal(consumedRepairAttempts([],
+    { status: 'BLOCKED_EXTERNAL', modelAttempted: false, modelAttempts: 0, reportedTokens: 0 }), 0);
+});
+
 test('verbose failed-model diagnostics retain the redacted terminal error within the same cap', () => {
   const diagnostic = sanitizedDiagnostic({ exitCode: 1, timedOut: false,
     stderr: 'dsh: reasoning: ' + 'planning '.repeat(100) +
