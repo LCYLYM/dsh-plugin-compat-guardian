@@ -19,9 +19,9 @@
 
 ```bash
 npm exec --yes \
-  --package=github:LCYLYM/dsh-plugin-compat-guardian#b355b6ec43fbe51ef0a8c33d0a3383f653bfb0af \
+  --package=github:LCYLYM/dsh-plugin-compat-guardian#5b52707c7785f60510a52d64c5bcf6d81dea3469 \
   -- dsh-plugin-compat-guardian onboard \
-  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@b355b6ec43fbe51ef0a8c33d0a3383f653bfb0af
+  --guardian-ref LCYLYM/dsh-plugin-compat-guardian/.github/workflows/guardian.yml@5b52707c7785f60510a52d64c5bcf6d81dea3469
 ```
 
 这条命令会打开一个 onboarding PR，不会直接改默认分支。你只需首次审核三件事：
