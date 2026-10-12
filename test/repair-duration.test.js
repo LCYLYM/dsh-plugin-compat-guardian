@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { CommandError } from '../lib/errors.js';
 import {
   classifyRepairFailure,
+  consumedRepairAttempts,
   independentVerifierEvidence,
   sanitizedDiagnostic,
   successfulModelAttempts,
@@ -118,7 +119,7 @@ test('a web crash with sanitized diagnostics remains eligible for targeted refin
   }), { refine: true, code: 'WEB_EXITED', status: 'BLOCKED' });
 });
 
-test('only completed model calls consume durable repair attempts after a later failure', () => {
+test('successful model call evidence excludes failed calls', () => {
   assert.equal(successfulModelAttempts([
     { name: 'install-repair-dsh', ok: true },
     { name: 'run-repair-dsh', ok: true },
@@ -126,6 +127,34 @@ test('only completed model calls consume durable repair attempts after a later f
     { name: 'run-repair-refinement', ok: false },
   ]), 1);
   assert.equal(successfulModelAttempts([{ name: 'run-repair-dsh', ok: false }]), 0);
+});
+
+test('a successful first call cannot hide a started failed refinement from the repair limit', () => {
+  const steps = [
+    { name: 'run-repair-dsh', ok: true },
+    { name: 'independent-verifier-attempt-1', ok: false },
+    { name: 'run-repair-refinement', ok: false },
+  ];
+  for (const status of ['BLOCKED', 'BLOCKED_CONTRACT']) {
+    assert.equal(consumedRepairAttempts(steps, { status, modelAttempted: true, modelAttempts: 2 }), 2);
+  }
+  assert.equal(consumedRepairAttempts([], { status: 'BLOCKED', modelAttempted: false, modelAttempts: 0 }), 0);
+  assert.equal(consumedRepairAttempts([{ name: 'run-repair-dsh', ok: false }],
+    { status: 'BLOCKED', modelAttempted: true, modelAttempts: 1 }), 1);
+  // Config/external recovery behavior is unchanged by the repair-failure fix.
+  assert.equal(consumedRepairAttempts(steps,
+    { status: 'BLOCKED_EXTERNAL', modelAttempted: true, modelAttempts: 2 }), 1);
+});
+
+test('verbose failed-model diagnostics retain the redacted terminal error within the same cap', () => {
+  const diagnostic = sanitizedDiagnostic({ exitCode: 1, timedOut: false,
+    stderr: 'dsh: reasoning: ' + 'planning '.repeat(100) +
+      'terminal error at /home/runner/work/private/repo/model.js api_key=super-secret-value',
+  });
+  assert.ok(diagnostic.length <= 500);
+  assert.match(diagnostic, /dsh: reasoning:.*middle omitted.*terminal error/);
+  assert.match(diagnostic, /<PATH>.*\[REDACTED\]/);
+  assert.doesNotMatch(diagnostic, /super-secret-value|\/home\/runner/);
 });
 
 test('convergence is coalesced with verifier refinement without deleting historical model turns', async () => {
