@@ -2,17 +2,21 @@
 
 ## 当前结果：每次更新 1 亿 token
 
-2026-10-12 用户要求提高默认额度，并明确同意五个测试仓库使用 4 轮、180 活跃分钟、保留累计用量。当前引擎 `5b52707c7785f60510a52d64c5bcf6d81dea3469` 已固定到五仓库；默认及配置 token 上限为 100,000,000，通用时间/轮次默认不改变。137 项单测 PASS，涵盖额度提高不清零、配置上限、累计轮次与收敛调用。
+2026-10-12 用户要求提高默认额度，并明确同意五个测试仓库使用 4 轮、180 活跃分钟、保留累计用量。默认及配置 token 上限为 100,000,000，通用时间/轮次默认不改变。最新计账引擎 `1d1343b52869988a0334546bc0633426028a72f8` 已部署 Web UI、Whale、fixture、Office；Ankh 原 5b52707 运行结束，正在做用户追加批准的直接最小修复。139 项引擎单测 PASS，涵盖额度提高不清零、配置上限、累计轮次与收敛调用。
 
 | 测试仓库 | 完整默认分支通过 | 再次稳定收敛 | 当前结论 |
 | --- | --- | --- | --- |
 | Web UI | 当前引擎 [38193026657](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38193026657)，升级 PR #9、最终账本 PR #11 已合并 | [38193317121](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38193317121)：NOOP，无模型 | PASS / OBSERVED |
 | Whale | 当前引擎 [38194018632](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38194018632)，升级 PR #12、独立时钟测试修复 PR #14、最新账本 PR #15 已合并 | [38194187509](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38194187509)：NOOP，无模型 | 修复后完整默认分支 PASS / OBSERVED |
 | fixture | 当前引擎 [38193030584](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38193030584)：真实 auto/high 文本工具回合 completed、无图片，当次 4,682 tokens；最终账本 PR #33 已合并 | [38193430461](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38193430461)：NOOP，无模型 | PASS / OBSERVED |
-| Office | [38191082765](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/38191082765)：FAIL，peerDependencies 仍拒绝目标 DSH | 失败账本 PR #12 已合并；不以冻结记为升级通过 | BLOCKED / OBSERVED，累计 5,601,840 tokens、4 个实际模型回合 |
-| Ankh | [38191075299](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/38191075299)：FAIL，peerDependencies 仍拒绝目标 DSH | 失败账本 PR #16 已合并；不以冻结记为升级通过 | BLOCKED / OBSERVED，累计 7,208,361 tokens、4 个实际模型回合 |
+| Office | [38197325283](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/38197325283)：用户批准的直接修复 PR #14 合入 master 后完整 PASS，账本 PR #15 已合并 | [38198349672](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/38198349672)：NOOP，无模型 | PASS / OBSERVED；保留累计 6,932,361 tokens、62.04 活跃分钟、6 个实际模型回合 |
+| Ankh | [38193253951](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/38193253951)：FAIL，refinement 运行 2,410,016ms 后 exit 1，报告分类 `MODEL_PROVIDER_5XX` | 失败账本 PR #17 已合并；不以冻结记为升级通过。直接最小修复正在验证 | BLOCKED_EXTERNAL / OBSERVED，累计 13,039,064 tokens、102.12 活跃分钟、6 个实际模型回合 |
 
-Office/Ankh 此次 token 和时间都未耗尽，停止原因是 4 个模型回合已经用完。旧实现的“收敛提醒”实际启动了一个可修改源码的新回合，先消耗了最后一轮，随后才得到 peer 安装失败证据。该调用真实发生过，不追溯删除计数或用量。新引擎把提醒并入必要的 verifier refinement 提示，不再额外发起一个回合，并在继续前检查跨 run 的累计轮次。用户随后明确允许两者累计 6 轮，保留上述 token 消耗、仍累计上限 1 亿与 180 分钟，已部署继续执行；其余仓库维持 4 轮。当前不 reset、不修改失败 verified。
+Office/Ankh 前4轮 token 和时间都未耗尽，停止原因是 4 个模型回合已经用完。旧实现的“收敛提醒”实际启动了一个可修改源码的新回合，先消耗了最后一轮，随后才得到 peer 安装失败证据。该调用真实发生过，不追溯删除计数或用量。新引擎把提醒并入必要的 verifier refinement 提示，不再额外发起一个回合，并在继续前检查跨 run 的累计轮次。用户随后明确允许两者累计 6 轮，保留上述 token 消耗、仍累计上限 1 亿与 180 分钟；其余仓库维持 4 轮。两者后续 refinement 都失败，当前未获准第7次 Guardian 模型调用。用户再批准直接最小修复、完整验证后合入并复验；Office 已完成，不 reset 用量，只有真实 verifier PASS 后更新 verified。
+
+Office 直接修复依据目标官方源码确认 `dsh-client-runtime` 已删除：仅迁移 ClientContext 类型到实际 Cordis 所属包、移除不存在的客户端注入项、更新 maxHost/依赖与同步类型产物；保留三个预览器、注册逻辑、原测试和 smoke。8/8 原测试、typecheck、build、macOS ARM64 独立 Guardian 全流程，以及合入 master 后 Linux Actions 全流程均 PASS。合同只检查 DSH Web shell，未做 docx/xlsx/pptx 的浏览器交互验收，不声称这三个格式已端到端验证。
+
+Office 最新失败暴露“先成功、后失败”的轮次漏计：机器账本原记录为5，真实步骤包含两次模型 CLI 启动，因此实际累计6。引擎 PR #30 修复 `BLOCKED/BLOCKED_CONTRACT` 分支，原配置/外部恢复策略不改变；139/139 单测通过。PR #13 只向上补记漏计的一次，token 与时间未改。长 stderr 诊断保留脱敏头尾，仍不超过500字符；旧报告仅留下开头 reasoning 与 hash，无法追溯恢复终止错误，不猜测供应商或超时根因。此引擎更新不会被部署到正在运行的 Ankh 源提交，以免造成 STALE_SOURCE。
 
 Whale 曾在当前引擎的 [38193022575](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38193022575) 出现工作流 SUCCESS、机械报告 `BLOCKED / COMMAND_FAILED npm test`，不是升级 PASS。双路径测试分别使用默认 `Date.now()`，完整 JSON 比较包含 `createdAt`；用每次递增的时钟对照，旧测试稳定暴露 1ms 差异，共享同一个输入 `now` 后通过。用户批准的 PR #14 仅改这项测试，保留完整比较并检查只读时钟一次，不改生产算法、删字段或放宽断言。本地 203/203 测试、构建、typecheck PASS；合入 main 后真实 Guardian 38194018632 的原测试/构建/安装/Web smoke/卸载全 PASS，无新增模型调用。CI 原日志没有完整 JSON 差异，不将本地实验时间戳冒充原 CI 现场证据。
 
