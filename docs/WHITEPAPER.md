@@ -186,7 +186,7 @@ repair 可以改普通插件源码、manifest、脚本、测试和文档，但�
 
 | 默认限制 | 数值 | 作用 |
 | --- | ---: | --- |
-| 总 token | 1,000,000 | DSH/DeepSeek 暴露的 usage 累计 |
+| 总 token | 100,000,000 | DSH/DeepSeek 暴露的 usage 累计 |
 | 估算费用 | 10 CNY | 使用版本化官方价格快照；route 不匹配则只报 token |
 | 活跃时间 | 60 分钟 | repair/verifier 实际运行；等待低价不计 |
 | repair attempts | 2 | 同一自动 campaign 内最多两次修改-复验 |
