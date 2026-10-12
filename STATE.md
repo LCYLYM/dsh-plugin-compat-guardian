@@ -4,9 +4,9 @@
 
 | ID | 当前授权与验收 | 状态 |
 | --- | --- | --- |
-| BUDGET-100M | 用户要求默认多给 token，每次更新上限 100,000,000；已有五个测试仓库同步配置，跨 run 保留累计用量 | 默认值与配置上限已部署五仓库；最终引擎 5b52707；137 项测试 PASS |
-| RETEST-ALL | 用户要求五个测试仓库至少真实稳定跑通一次；批准已验证补丁及 Whale 时钟测试修复合入，并追加允许 Office/Ankh 不再调用 Guardian 模型，直接最小修复、完整验证后合入复验 | fixture/Web UI/Whale/Office 默认分支 PASS 后再次 NOOP。Office PR #14直接修复已合并，原测试与合同不变。Ankh 6轮失败后直接最小迁移正在验证，整体仍 PARTIAL |
-| RESUME-BOUND | 用户明确同意五测试仓库 4 轮、180 活跃分钟，并追加允许 Office/Ankh 累计6轮；保留已消耗 tokens，不 reset | Office 6,932,361 tokens、Ankh13,039,064 tokens，均按真实启动补记至6轮，失败账本保留；无新增第7轮。其余维持4轮。PR #30修复失败refinement漏计，139项测试PASS，4仓库已部署1d1343b |
+| BUDGET-100M | 用户要求默认多给 token，每次更新上限 100,000,000；已有五个测试仓库同步配置，跨 run 保留累计用量 | 默认值与配置上限已部署五仓库；最终引擎 637f975；140 项测试 PASS |
+| RETEST-ALL | 用户要求五个测试仓库至少真实稳定跑通一次；批准已验证补丁及 Whale 时钟测试修复合入，并追加允许 Office/Ankh 不再调用 Guardian 模型，直接最小修复、完整验证后合入复验 | PASS / OBSERVED：五仓库默认分支完整 PASS，合并账本后再次 NOOP，第二次模型全部 skipped。Office PR #14、Ankh PR #18直接修复已合并，原测试与合同不变。覆盖边界与历史 FAIL 均保留在 docs/ANNA_UPGRADE_VALIDATION.md |
+| RESUME-BOUND | 用户明确同意五测试仓库 4 轮、180 活跃分钟，并追加允许 Office/Ankh 累计6轮；保留已消耗 tokens，不 reset | Office 6,932,361 tokens、Ankh13,039,064 tokens，均按真实启动补记至6轮，失败账本保留；无新增第7轮。其余维持4轮。PR #30/#31 修复失败 refinement 及有用量的外部失败漏计，140项测试PASS |
 
 引擎默认 token 为每个 repository + target DSH version 更新累计 100,000,000，配置不可超过该值；估算 CNY、时间和轮次仍各自生效。引擎通用默认 2 轮/60 分钟不变，五测试仓库显式覆盖为 4 轮/180 分钟。repair job 时间仅放宽到 210 分钟以容纳这项授权；实际模型进程仍按仓库额度实时止损。
 
