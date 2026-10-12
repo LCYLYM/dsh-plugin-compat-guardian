@@ -6,13 +6,15 @@
 
 | 测试仓库 | 完整默认分支通过 | 再次稳定收敛 | 当前结论 |
 | --- | --- | --- | --- |
-| Web UI | [38192010312](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38192010312)，升级 PR #9、账本 PR #10 已合并 | [38192840553](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38192840553)：NOOP，无模型 | PASS / OBSERVED |
-| Whale | [38191089517](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38191089517)，升级 PR #12、账本 PR #13 已合并 | [38192449192](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38192449192)：NOOP，无模型 | PASS / OBSERVED |
-| fixture | [38191096912](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38191096912)：真实 auto/high 文本工具回合 completed、无图片，当次 4,688 tokens；账本 PR #32 已合并 | [38192459611](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38192459611)：NOOP，无模型 | PASS / OBSERVED |
+| Web UI | 当前引擎 [38193026657](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38193026657)，升级 PR #9、最终账本 PR #11 已合并 | [38193317121](https://github.com/LCYLYM/dsh-web-ui/actions/runs/38193317121)：NOOP，无模型 | PASS / OBSERVED |
+| Whale | 当前引擎 [38194018632](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38194018632)，升级 PR #12、独立时钟测试修复 PR #14、最新账本 PR #15 已合并 | [38194187509](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38194187509)：NOOP，无模型 | 修复后完整默认分支 PASS / OBSERVED |
+| fixture | 当前引擎 [38193030584](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38193030584)：真实 auto/high 文本工具回合 completed、无图片，当次 4,682 tokens；最终账本 PR #33 已合并 | [38193430461](https://github.com/LCYLYM/dsh-attachments-guardian-fixture/actions/runs/38193430461)：NOOP，无模型 | PASS / OBSERVED |
 | Office | [38191082765](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/38191082765)：FAIL，peerDependencies 仍拒绝目标 DSH | 失败账本 PR #12 已合并；不以冻结记为升级通过 | BLOCKED / OBSERVED，累计 5,601,840 tokens、4 个实际模型回合 |
 | Ankh | [38191075299](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/38191075299)：FAIL，peerDependencies 仍拒绝目标 DSH | 失败账本 PR #16 已合并；不以冻结记为升级通过 | BLOCKED / OBSERVED，累计 7,208,361 tokens、4 个实际模型回合 |
 
 Office/Ankh 此次 token 和时间都未耗尽，停止原因是 4 个模型回合已经用完。旧实现的“收敛提醒”实际启动了一个可修改源码的新回合，先消耗了最后一轮，随后才得到 peer 安装失败证据。该调用真实发生过，不追溯删除计数或用量。新引擎把提醒并入必要的 verifier refinement 提示，不再额外发起一个回合，并在继续前检查跨 run 的累计轮次。用户随后明确允许两者累计 6 轮，保留上述 token 消耗、仍累计上限 1 亿与 180 分钟，已部署继续执行；其余仓库维持 4 轮。当前不 reset、不修改失败 verified。
+
+Whale 曾在当前引擎的 [38193022575](https://github.com/LCYLYM/dsh-whale-report/actions/runs/38193022575) 出现工作流 SUCCESS、机械报告 `BLOCKED / COMMAND_FAILED npm test`，不是升级 PASS。双路径测试分别使用默认 `Date.now()`，完整 JSON 比较包含 `createdAt`；用每次递增的时钟对照，旧测试稳定暴露 1ms 差异，共享同一个输入 `now` 后通过。用户批准的 PR #14 仅改这项测试，保留完整比较并检查只读时钟一次，不改生产算法、删字段或放宽断言。本地 203/203 测试、构建、typecheck PASS；合入 main 后真实 Guardian 38194018632 的原测试/构建/安装/Web smoke/卸载全 PASS，无新增模型调用。CI 原日志没有完整 JSON 差异，不将本地实验时间戳冒充原 CI 现场证据。
 
 Web UI 补充全仓检查：typecheck PASS；原并行 pnpm test 的 Git Graph hook 超时 FAIL，未修改断言或时间值；相同源码串行全仓测试 PASS（Git Graph 101/101、Pet 359/359），scripts 153/153、docs、Skill Explorer build、runtime-deps 13 个包均 PASS。串行对照支持并发负载影响，不声称原并行命令稳定。CodeGraph 不在本机可执行路径，未安装替代工具。
 
