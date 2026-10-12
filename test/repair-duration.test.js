@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 
 import { CommandError } from '../lib/errors.js';
 import {
@@ -125,4 +126,13 @@ test('only completed model calls consume durable repair attempts after a later f
     { name: 'run-repair-refinement', ok: false },
   ]), 1);
   assert.equal(successfulModelAttempts([{ name: 'run-repair-dsh', ok: false }]), 0);
+});
+
+test('convergence is coalesced with verifier refinement without deleting historical model turns', async () => {
+  const source = await readFile(new URL('../lib/repair.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /await runModel\(convergePrompt/);
+  assert.match(source, /previous\?\.attempts_used \?\? 0\) \+ modelAttempts >= config\.repair\.max_attempts/);
+  assert.equal(successfulModelAttempts([
+    { name: 'run-repair-dsh', ok: true }, { name: 'send-converge-message', ok: true },
+  ]), 2);
 });
