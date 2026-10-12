@@ -12,7 +12,7 @@
 | Office | [38191082765](https://github.com/LCYLYM/dsh-plugin-better-sidebar-plugin-office/actions/runs/38191082765)：FAIL，peerDependencies 仍拒绝目标 DSH | 失败账本 PR #12 已合并；不以冻结记为升级通过 | BLOCKED / OBSERVED，累计 5,601,840 tokens、4 个实际模型回合 |
 | Ankh | [38191075299](https://github.com/LCYLYM/dsh-ankh-guard/actions/runs/38191075299)：FAIL，peerDependencies 仍拒绝目标 DSH | 失败账本 PR #16 已合并；不以冻结记为升级通过 | BLOCKED / OBSERVED，累计 7,208,361 tokens、4 个实际模型回合 |
 
-Office/Ankh 此次 token 和时间都未耗尽，停止原因是 4 个模型回合已经用完。旧实现的“收敛提醒”实际启动了一个可修改源码的新回合，先消耗了最后一轮，随后才得到 peer 安装失败证据。该调用真实发生过，不追溯删除计数或用量。新引擎把提醒并入必要的 verifier refinement 提示，不再额外发起一个回合，并在继续前检查跨 run 的累计轮次。增加到 6 轮尚待用户授权；当前不 reset、不修改失败 verified。
+Office/Ankh 此次 token 和时间都未耗尽，停止原因是 4 个模型回合已经用完。旧实现的“收敛提醒”实际启动了一个可修改源码的新回合，先消耗了最后一轮，随后才得到 peer 安装失败证据。该调用真实发生过，不追溯删除计数或用量。新引擎把提醒并入必要的 verifier refinement 提示，不再额外发起一个回合，并在继续前检查跨 run 的累计轮次。用户随后明确允许两者累计 6 轮，保留上述 token 消耗、仍累计上限 1 亿与 180 分钟，已部署继续执行；其余仓库维持 4 轮。当前不 reset、不修改失败 verified。
 
 Web UI 补充全仓检查：typecheck PASS；原并行 pnpm test 的 Git Graph hook 超时 FAIL，未修改断言或时间值；相同源码串行全仓测试 PASS（Git Graph 101/101、Pet 359/359），scripts 153/153、docs、Skill Explorer build、runtime-deps 13 个包均 PASS。串行对照支持并发负载影响，不声称原并行命令稳定。CodeGraph 不在本机可执行路径，未安装替代工具。
 
