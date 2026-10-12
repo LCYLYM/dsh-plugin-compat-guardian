@@ -27,6 +27,7 @@ test('plugin workspace resolves a monorepo package without changing the reposito
 });
 
 const INVALID_CONFIGS = [
+  ['token cap above the per-update ceiling', { budget: { max_tokens: 100_000_001 } }],
   ['invalid watch source', { watch: { source: 'git-tags' } }],
   ['invalid GitHub repository', { watch: { github_repository: 'deepseek-ai' } }],
   ['empty provider', { repair: { provider: '' } }],
@@ -49,6 +50,7 @@ test('default watch source is the official GitHub Release with prereleases enabl
     assert.equal(config.watch.source, 'github-release');
     assert.equal(config.watch.github_repository, 'deepseek-ai/deepseek-harness');
     assert.equal(config.watch.github_include_prereleases, true);
+    assert.equal(config.budget.max_tokens, 100_000_000);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -25,7 +25,8 @@ test('reusable workflow keeps immutable actions, concurrency, and split permissi
   for (const jobName of ['publish-model-smoke-state', 'publish-blocked-state']) {
     const jobSource = JSON.stringify(workflow.jobs[jobName]);
     assert.match(jobSource, /--state open --head/);
-    assert.match(jobSource, /branch=.*GITHUB_RUN_ID/);
+    assert.match(jobSource, /branch=.*-run-.*GITHUB_RUN_ID/);
+    assert.doesNotMatch(jobSource, /branch=.*branch\/.*GITHUB_RUN_ID/);
   }
   assert.deepEqual(workflow.jobs['publish-repair'].permissions, {
     contents: 'write',

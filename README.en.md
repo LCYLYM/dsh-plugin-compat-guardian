@@ -79,7 +79,9 @@ Model repair is eligible only when the same gates prove that an existing baselin
 
 Changes to tests, test commands, install lifecycle scripts, dependency majors, or dependency additions/removals always force a normal human-review PR. Control files, workflows, the lock, the reviewed smoke contract, credentials and paths outside the repository are protected from the repair agent.
 
-Each `repository + target DSH version` campaign defaults to 1,000,000 tokens, an estimated 10 CNY, 60 active minutes and two model attempts. At 30% remaining budget, Guardian can send one convergence message. One target version receives one automatic repair campaign; after exhaustion, increase the limits or commit `resetBudget: Y` in `.dsh-compat.lock.json`. That `Y` edge is consumed back to `N` once.
+Each `repository + target DSH version` campaign defaults to 100,000,000 tokens, an estimated 10 CNY, 60 active minutes and two model attempts. At 30% remaining budget, Guardian can send one convergence message. One target version receives one automatic repair campaign; after exhaustion, increase the limits or commit `resetBudget: Y` in `.dsh-compat.lock.json`. That `Y` edge is consumed back to `N` once.
+
+The token configuration cannot exceed 100,000,000. Usage carries across runs of the same campaign; each round does not receive a fresh allowance. Time, estimated CNY and repair attempts remain separate limits and may be explicitly overridden in repository configuration.
 
 Deterministic checks run immediately. Only code repair may wait for the configured DeepSeek low-price window. CNY is a local estimate from DSH-reported usage and the configured price snapshot, not an account-level billing circuit breaker.
 

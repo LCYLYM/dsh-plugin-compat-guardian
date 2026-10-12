@@ -74,7 +74,7 @@ V1 的处理很简单：只改变候选 DSH，其他基线冻结；不区分原�
 | D32 | 一个目标 DSH 版本对应一个维修 PR。PR 未合并时 latest 变化，旧 PR 标记 `SUPERSEDED` 并自动关闭、保留记录；新目标从当前默认分支重新验证，必要时另开 PR，不改写或复用旧 PR。 |
 | D33 | 插件 workflow 用完整 commit SHA 引用 Guardian reusable workflow，并注释人类可读版本；V1 不做 Guardian 自升级检测或更新 PR。DSH 更新不改变该 SHA；以后确需升级时由用户手工改一行或重跑安装。 |
 | D34 | candidate 直接 PASS、没有代码修复时仍提交 verified lock，避免下次重复测试；简短报告放 PR/Issue/Actions Summary，lock 保存其 URL，不在仓库增加逐版本报告文件。交付继续复用 pull-request/auto-merge/direct-push 三种模式，不改插件代码。 |
-| D35 | 默认 campaign 上限为总 token 1,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
+| D35 | 默认 campaign 上限为总 token 100,000,000、估算 10 CNY、实际运行 60 分钟和最多 2 个 repair attempt；任一先耗尽即停止。30% 收敛消息默认开启且只发一次，`WAITING_FOR_PRICE` 不计入运行时间。 |
 | D36 | DeepSeek 官方搜索默认允许且由 repair DSH 按需使用；默认提示词建议把官方标准、文档和源码作为辅助证据。Guardian 不设置搜索次数/uses 专属上限，搜索仍受整体 60 分钟运行边界和 provider 自身限制。 |
 | D37 | candidate 默认不调用模型。只有 onboarding 已审核的 contract 明确 `requires_model_turn: true` 时，才在无 Git 写权限的独立 smoke step 用仓库同一套 provider/model/Secret 执行一次固定真实回合；usage 计入同一 campaign，缺 key 为 `BLOCKED_CONFIG`。V1 不建设 ephemeral proxy。 |
 | D38 | 真实模型 smoke 只按本轮冻结输入与可重复机械证据判定：插件实际处理输入、所需附件/图片进入模型请求、provider 成功返回且 DSH 收到非空结果。不得匹配具体回答措辞或主观质量；用户可在 onboarding contract 增加更强的确定性断言，repair 不得修改。 |
@@ -378,7 +378,7 @@ hard stop = token / CNY / wall time / attempt 任一启用上限耗尽
 steer     = 任一主要预算剩余比例 <= 30%，且本 campaign 尚未发送过
 ```
 
-可覆盖默认值为 `max_tokens=1000000`、`max_cny=10`、`max_wall_minutes=60`、`max_attempts=2`。墙钟只累计实际执行 repair 与 verifier 的时间；跨 run 等待低价窗口的 `WAITING_FOR_PRICE` 不计时，否则一次正常峰谷等待就会把预算耗尽。任一启用上限先到都拒绝下一次模型请求或 repair attempt；已经发出的单次请求仍可能产生少量尾差。
+可覆盖默认值为 `max_tokens=100000000`、`max_cny=10`、`max_wall_minutes=60`、`max_attempts=2`。墙钟只累计实际执行 repair 与 verifier 的时间；跨 run 等待低价窗口的 `WAITING_FOR_PRICE` 不计时，否则一次正常峰谷等待就会把预算耗尽。任一启用上限先到都拒绝下一次模型请求或 repair attempt；已经发出的单次请求仍可能产生少量尾差。
 
 MVP 累计 DSH/DeepSeek 已经暴露的 token usage，包括 contract 要求的 candidate 固定模型 smoke、主 repair session、子 agent、压缩和重试。独立 DeepSeek 搜索目前不暴露 usage，因此只记录调用次数、所选模型和结果状态，不为这点小额误差另造计费通道。
 

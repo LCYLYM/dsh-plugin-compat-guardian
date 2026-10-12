@@ -72,6 +72,23 @@ test('unknown CNY does not fabricate an official-provider cost', () => {
   assert.equal(state.exhausted, false);
 });
 
+test('larger update allowance resumes without discarding already spent usage or attempts', () => {
+  const previous = {
+    status: 'BLOCKED', automatic_repair_used: true, attempts_used: 2,
+    usage: { inputTokens: 6_173_710, totalTokens: 6_173_710 }, active_ms: 3_117_434,
+    limits: { max_tokens: 4_000_000, max_cny: 3, max_wall_minutes: 60, max_attempts: 2 },
+  };
+  const raised = { ...budget, max_tokens: 100_000_000, max_cny: 3, max_wall_minutes: 180 };
+  const gate = repairCampaignGate({ lock: { resetBudget: 'N', campaigns: { next: previous } },
+    target: 'next', budget: raised, maxAttempts: 4, startPolicy: 'immediate', pricing });
+  assert.equal(gate.status, 'READY');
+  assert.equal(gate.reset, 'increased-budget');
+  const carried = campaignEpoch(previous, gate.reset);
+  assert.deepEqual(carried, previous);
+  assert.equal(budgetState({ usage: carried.usage, activeMs: carried.active_ms,
+    estimatedCny: null, attemptsUsed: carried.attempts_used + 1 }, raised, 4).exhausted, false);
+});
+
 test('low-price gate waits at peak, while manual runs bypass only the price wait', () => {
   const peak = new Date('2026-08-22T02:00:00Z');
   const waiting = repairCampaignGate({
